@@ -2,9 +2,11 @@ package check
 
 import (
 	"errors"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/go-multierror"
 	version "github.com/hashicorp/go-version"
@@ -25,11 +27,11 @@ func CommandFactory() (cli.Command, error) {
 }
 
 func (c *command) Help() string {
-	return "help me"
+	return ""
 }
 
 func (c *command) Synopsis() string {
-	return "m'synopsis"
+	return ""
 }
 
 func (c *command) Run(args []string) int {
@@ -43,21 +45,12 @@ func (c *command) Run(args []string) int {
 		return 1
 	}
 
-	// perform all checks, then display results
-	// for each check, there is an output value
-	// and a bool saying whether the check passed
 	goVersion, goVersionSatisfiesConstraint := CheckGoVersion(providerPath)
 
-	// check for go 1.12+
-
-	// check that all dependencies are tracked via go modules
 	providerUsesGoModules := CheckForGoModules(providerPath)
 
 	SDKVersionSatisfiesConstraint := false
 	SDKVersion := ""
-
-	// check that provider uses latest SDK v 0.12.x
-	// TODO: simplify by only checking if provider does use modules?
 	if providerUsesGoModules {
 		SDKVersion, SDKVersionSatisfiesConstraint, err = CheckProviderSDKVersion(providerPath)
 		if err != nil {
@@ -65,12 +58,20 @@ func (c *command) Run(args []string) int {
 			return 1
 		}
 	}
-
 	log.Printf("Go Version: " + goVersion + " SDK Version: " + SDKVersion)
 
-	// check that provider doesn't use packages we're removing
+	removedPackagesInUse, doesNotUseRemovedPackages, err := CheckSDKPackageImports(providerPath)
+	if err != nil {
+		log.Printf("Error determining use of removed SDK packages: %s", err)
+		return 1
+	}
+	if doesNotUseRemovedPackages {
+		log.Println("No use of removed SDK packages detected")
+	} else {
+		log.Printf("Removed SDK packages in use: %+v", removedPackagesInUse)
+	}
 
-	if goVersionSatisfiesConstraint && providerUsesGoModules && SDKVersionSatisfiesConstraint {
+	if goVersionSatisfiesConstraint && providerUsesGoModules && SDKVersionSatisfiesConstraint && doesNotUseRemovedPackages {
 		log.Printf("all constraints satisfied!")
 		return 0
 	}
@@ -130,6 +131,36 @@ func CheckProviderSDKVersion(providerPath string) (SDKVersion string, satisfiesC
 	return v.String(), c.Check(v), nil
 }
 
-// func CheckSDKPackageImports(providerPath string) (packageImports string, includesRemovedPackages bool) {
-// 	return nil
-// }
+func CheckSDKPackageImports(providerPath string) (removedPackagesInUse []string, doesNotUseRemovedPackages bool, e error) {
+	removedPackages, err := readRemovedPackagesFile("REMOVED_PACKAGES")
+	if err != nil {
+		return []string{}, false, err
+	}
+
+	removedPackagesInUse = []string{}
+
+	filepath.Walk(providerPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() && info.Name() == "vendor" {
+			return filepath.SkipDir
+		}
+		if !info.IsDir() && strings.HasSuffix(info.Name(), ".go") {
+			removedPackagesInUse = append(removedPackagesInUse, util.FindImportedPackages(path, removedPackages)...)
+		}
+		return nil
+	})
+
+	return removedPackagesInUse, len(removedPackagesInUse) == 0, nil
+}
+
+func readRemovedPackagesFile(path string) ([]string, error) {
+	// it's a small file
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		return []string{}, err
+	}
+	lines := strings.Split(string(content), "\n")
+	return lines, nil
+}

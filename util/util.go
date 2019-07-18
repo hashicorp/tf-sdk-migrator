@@ -2,11 +2,15 @@ package util
 
 import (
 	"fmt"
+	"go/ast"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+
+	refs "github.com/radeksimko/go-refs/parser"
 )
 
 func ReadOneOf(dir string, filenames ...string) (fullpath string, content []byte, err error) {
@@ -30,10 +34,6 @@ func SearchLines(lines []string, search string, start int) int {
 }
 
 func GetProviderPath(providerRepoName string) (string, error) {
-	// if providerRepoName == "" {
-	// 	return os.Getwd()
-	// }
-
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		log.Printf("GOPATH is empty")
@@ -62,4 +62,43 @@ func GetProviderPath(providerRepoName string) (string, error) {
 	}
 
 	return "", fmt.Errorf("Could not find %s in working directory or GOPATH: %s", providerRepoName, gopath)
+}
+
+func FindImportedPackages(filePath string, packagesToFind []string) (foundPackages []string) {
+	// TODO: check file exists so ParseFile doesn't panic
+	f, err := refs.ParseFile(filePath)
+	if err != nil {
+		log.Print(err)
+	}
+
+	packages := make(map[string]bool)
+
+	ast.Inspect(f, func(node ast.Node) bool {
+		if node == nil {
+			return false
+		}
+
+		switch node.(type) {
+		case *ast.ImportSpec:
+			importPath := node.(*ast.ImportSpec).Path.Value
+
+			i := sort.Search(len(packagesToFind), func(i int) bool {
+				return packagesToFind[i] == strings.Trim(importPath, "\"")
+			})
+			if i < len(packagesToFind) {
+				log.Printf("import %s is in there", importPath)
+				packageName := packagesToFind[i]
+				packages[packageName] = true
+			}
+		}
+
+		return true
+	})
+
+	foundPackages = make([]string, len(packages))
+	for k := range packages {
+		foundPackages = append(foundPackages, k)
+	}
+
+	return foundPackages
 }
