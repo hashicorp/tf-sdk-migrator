@@ -8,6 +8,8 @@ github.com/fatih/color
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v1.0.0
 github.com/hashicorp/go-multierror
+# github.com/hashicorp/go-version v1.2.0
+github.com/hashicorp/go-version
 # github.com/mattn/go-colorable v0.0.9
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.3
@@ -19,5 +21,7 @@ github.com/posener/complete
 github.com/posener/complete/cmd/install
 github.com/posener/complete/cmd
 github.com/posener/complete/match
+# github.com/radeksimko/go-refs v0.0.0-20190614111518-1b15b5989e59
+github.com/radeksimko/go-refs/parser
 # golang.org/x/sys v0.0.0-20180823144017-11551d06cbcc
 golang.org/x/sys/unix
