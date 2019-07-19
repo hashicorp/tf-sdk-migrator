@@ -27,11 +27,21 @@ func CommandFactory() (cli.Command, error) {
 }
 
 func (c *command) Help() string {
-	return ""
+	return `Usage: tf-sdk-migrator check [--help] PATH
+
+  Checks whether the Terraform provider at PATH is ready to be migrated to the
+  new Terraform provider SDK (v1).
+
+  By default, outputs a human-readable report and exits 0 if the provider is
+  ready for migration, 1 otherwise.
+
+Options:
+  ---csv    Output results in CSV format.
+`
 }
 
 func (c *command) Synopsis() string {
-	return ""
+	return "Checks whether a Terraform provider is ready to be migrated to the new SDK (v1)."
 }
 
 func (c *command) Run(args []string) int {
