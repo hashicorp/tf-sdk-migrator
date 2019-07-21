@@ -34,15 +34,15 @@ func ReadGoVersionFromGoModFile(providerPath string) (*version.Version, error) {
 
 	lines := strings.Split(string(content), "\n")
 
-	goLine := util.SearchLines(lines, "go ", 0)
+	goLine := util.SearchLinesPrefix(lines, "go ", 0)
 	if goLine == -1 {
 		return nil, errors.New("no 'go' directive in go.mod")
 	}
 
-	v := strings.TrimLeft(lines[goLine+1], "go ")
+	v := strings.TrimLeft(lines[goLine], "go ")
 	v = strings.TrimSpace(v)
 
-	return version.NewVersion(lines[0])
+	return version.NewVersion(v)
 }
 
 func ReadGoVersionFromTravisConfig(providerPath string) (*version.Version, error) {

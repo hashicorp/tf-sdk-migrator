@@ -33,6 +33,15 @@ func SearchLines(lines []string, search string, start int) int {
 	return -1
 }
 
+func SearchLinesPrefix(lines []string, search string, start int) int {
+	for i := start; i < len(lines); i++ {
+		if strings.HasPrefix(lines[i], search) {
+			return i
+		}
+	}
+	return -1
+}
+
 func GetProviderPath(providerRepoName string) (string, error) {
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
