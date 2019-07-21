@@ -18,7 +18,6 @@ func ReadSDKVersionFromGoModFile(providerPath string) (*version.Version, error) 
 
 	lines := strings.Split(string(content), "\n")
 
-	// not handled: case where there is more than one terraform dependency directive
 	terraformPackageLine := util.SearchLines(lines, terraformDependencyPath+" ", 0)
 	if terraformPackageLine == -1 {
 		return nil, errors.New("could not find github/hashicorp/terraform dependency for provider " + providerPath)
