@@ -4,14 +4,18 @@ The Terraform provider plugin SDK, previously part of the [github.com/hashicorp/
 
 `tf-sdk-migrator` is a CLI tool which will migrate a Terraform provider to the new SDK module by rewriting import paths. `tf-sdk-migrator check` checks the eligibility of the Provider for migration.
 
-## Build
+Eligibility data for current providers can be found in [./reports](./reports).
+
+## Usage
+
+### Build
 
 ```sh
 go build
 ./tf-sdk-migrator
 ```
 
-## Check eligibility for migration: `tf-sdk-migrator check`
+### Check eligibility for migration: `tf-sdk-migrator check`
 
 Checks whether a Terraform provider is ready to migrate to the newly extracted Terraform SDK package. 
 
@@ -29,7 +33,7 @@ The `--csv` flag will output values in CSV format.
 
 Exits 0 if the provider meets all the migration requirements, 1 otherwise.
 
-## Migrate to SDK module
+### Migrate to SDK module
 
 Docs to be added.
 
