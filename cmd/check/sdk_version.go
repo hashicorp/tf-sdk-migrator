@@ -25,6 +25,7 @@ func ReadSDKVersionFromGoModFile(providerPath string) (*version.Version, error) 
 	}
 
 	v := strings.TrimSpace(lines[terraformPackageLine])
+	v = strings.TrimLeft(v, "require ")
 	v = strings.TrimLeft(v, terraformDependencyPath+" ")
 
 	return version.NewVersion(v)
