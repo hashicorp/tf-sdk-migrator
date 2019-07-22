@@ -43,7 +43,7 @@ Docs to be added.
 
 ### Listing packages in Core but not SDK
 
-`REMOVED_PACKAGES` was created with this one-liner:
+`REMOVED_PACKAGES` in `cmd/check/sdk_imports.go` was created with this one-liner:
 
 ```sh
 comm -13 <(cd terraform-plugin-sdk; go list ./... | sed -E 's/github.com\/hashicorp\/terraform-plugin-sdk\/sdk\/(internal\/)?//' | sort) <(cd ../terraform; go list ./... | sed 's/github.com\/hashicorp\/terraform\///' | sort) | xargs -I "%" echo "github.com/hashicorp/terraform/""%"

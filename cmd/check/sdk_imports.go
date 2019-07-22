@@ -1,4 +1,14 @@
-github.com/hashicorp/terraform/backend
+package check
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/kmoe/tf-sdk-migrator/util"
+)
+
+const REMOVED_PACKAGES = `github.com/hashicorp/terraform/backend
 github.com/hashicorp/terraform/backend/atlas
 github.com/hashicorp/terraform/backend/init
 github.com/hashicorp/terraform/backend/local
@@ -67,4 +77,24 @@ github.com/hashicorp/terraform/state/remote
 github.com/hashicorp/terraform/states/statemgr
 github.com/hashicorp/terraform/tools/loggraphdiff
 github.com/hashicorp/terraform/tools/terraform-bundle
-github.com/hashicorp/terraform/tools/terraform-bundle/e2etest
+github.com/hashicorp/terraform/tools/terraform-bundle/e2etest`
+
+func CheckSDKPackageImports(providerPath string) (removedPackagesInUse []string, doesNotUseRemovedPackages bool, e error) {
+	removedPackages := strings.Split(REMOVED_PACKAGES, "\n")
+	removedPackagesInUse = []string{}
+
+	filepath.Walk(providerPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() && info.Name() == "vendor" {
+			return filepath.SkipDir
+		}
+		if !info.IsDir() && strings.HasSuffix(info.Name(), ".go") {
+			removedPackagesInUse = append(removedPackagesInUse, util.FindImportedPackages(path, removedPackages)...)
+		}
+		return nil
+	})
+
+	return removedPackagesInUse, len(removedPackagesInUse) == 0, nil
+}
