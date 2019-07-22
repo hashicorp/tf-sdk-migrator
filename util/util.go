@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	refs "github.com/radeksimko/go-refs/parser"
@@ -91,13 +90,12 @@ func FindImportedPackages(filePath string, packagesToFind []string) (foundPackag
 		case *ast.ImportSpec:
 			importPath := node.(*ast.ImportSpec).Path.Value
 
-			i := sort.Search(len(packagesToFind), func(i int) bool {
-				return packagesToFind[i] == strings.Trim(importPath, "\"")
-			})
-			if i < len(packagesToFind) {
-				log.Printf("import %s is in there", importPath)
-				packageName := packagesToFind[i]
-				packages[packageName] = true
+			for i := range packagesToFind {
+				if packagesToFind[i] == strings.Trim(importPath, "\"") {
+					packageName := packagesToFind[i]
+					packages[packageName] = true
+					break;
+				}
 			}
 		}
 
