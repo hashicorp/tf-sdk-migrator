@@ -51,15 +51,24 @@ func (c *command) Run(args []string) int {
 	flags.BoolVar(&csv, "csv", false, "CSV output")
 	flags.Parse(args)
 
-	var providerRepoName string
+	var providerPath string
 	if len(args) > 0 {
-		providerRepoName = args[len(args)-1]
+		var err error
+		providerRepoName := args[len(args)-1]
+		providerPath, err = util.GetProviderPath(providerRepoName)
+		if err != nil {
+			log.Printf("Error finding provider %s: %s", providerRepoName, err)
+			return 1
+		}
+	} else {
+		var err error
+		providerPath, err = os.Getwd()
+		if err != nil {
+			log.Printf("Error finding current working directory: %s", err)
+			return 1
+		}
 	}
-	providerPath, err := util.GetProviderPath(providerRepoName)
-	if err != nil {
-		log.Printf("Error finding provider %s: %s", providerRepoName, err)
-		return 1
-	}
+
 	ui := &cli.ColoredUi{
 		OutputColor: cli.UiColorNone,
 		InfoColor:   cli.UiColorBlue,
@@ -101,7 +110,7 @@ func (c *command) Run(args []string) int {
 		if !csv {
 			ui.Output("Checking version of github.com/hashicorp/terraform SDK used in provider...")
 		}
-		SDKVersion, SDKVersionSatisfiesConstraint, err = CheckProviderSDKVersion(providerPath)
+		SDKVersion, SDKVersionSatisfiesConstraint, err := CheckProviderSDKVersion(providerPath)
 		if !csv {
 			if SDKVersionSatisfiesConstraint {
 				ui.Info(fmt.Sprintf("SDK version %s: OK.", SDKVersion))
