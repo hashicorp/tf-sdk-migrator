@@ -59,6 +59,7 @@ github.com/hashicorp/terraform/communicator/winrm
 github.com/hashicorp/terraform/configs/configupgrade
 github.com/hashicorp/terraform/digraph
 github.com/hashicorp/terraform/e2e
+github.com/hashicorp/terraform/flatmap
 github.com/hashicorp/terraform/helper/diff
 github.com/hashicorp/terraform/helper/shadow
 github.com/hashicorp/terraform/helper/signalwrapper
