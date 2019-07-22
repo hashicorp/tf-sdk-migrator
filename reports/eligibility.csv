@@ -7,13 +7,13 @@ terraform-provider-archive,1.11.5,false,true,0.12.0-alpha4.0.20190424121927-9327
 terraform-provider-arukas,1.11.5,false,true,0.12.0-alpha4.0.20190401192225-916f900d1d56,false,true,false
 terraform-provider-atlas,1.11.0,false,false,,false,true,false
 terraform-provider-avi,1.12.0,true,true,0.12.2,true,true,true
-terraform-provider-aws,1.12.0,true,true,0.12.0-beta2,false,true,false
+terraform-provider-aws,1.12.0,true,true,0.12.0-beta2,false,false,false
 terraform-provider-azure-classic,1.8.1,false,false,,false,true,false
 terraform-provider-azuread,1.12.0,true,true,0.12.0,true,true,true
 terraform-provider-azurerm,1.12.0,true,true,0.12.0,true,true,true
 terraform-provider-azurestack,1.12.0,true,true,0.12.0,true,true,true
 terraform-provider-bigip,1.11.5,false,true,0.12.0,true,true,false
-terraform-provider-bitbucket,1.11.5,false,true,,false,true,false
+terraform-provider-bitbucket,1.11.5,false,true,0.12.2,true,true,false
 terraform-provider-brightbox,1.11.0,false,true,0.12.3,true,true,false
 terraform-provider-chef,1.11.5,false,true,0.12.2,true,true,false
 terraform-provider-cidr,,false,false,,false,true,false
@@ -67,7 +67,7 @@ terraform-provider-nomad,1.11.5,false,true,0.12.0-rc1,false,true,false
 terraform-provider-ns1,1.11.5,false,true,0.12.3,true,true,false
 terraform-provider-nsxt,1.11.5,false,true,0.12.0,true,true,false
 terraform-provider-null,1.11.0,false,true,0.12.0-alpha4.0.20190424121927-9327eedb0417,false,true,false
-terraform-provider-nutanix,1.11.5,false,true,0.11.14-0.20190313165547-28810e6c0c0a,false,true,false
+terraform-provider-nutanix,1.11.5,false,true,0.11.14-0.20190313165547-28810e6c0c0a,false,false,false
 terraform-provider-oci,1.11.0,false,true,0.12.4-0.20190628193153-a74738cd35fc,false,true,false
 terraform-provider-oneandone,1.11.5,false,true,0.11.12-beta1.0.20190214175014-182daa619826,false,true,false
 terraform-provider-opc,1.11.5,false,true,0.12.0-alpha4.0.20190424121927-9327eedb0417,false,true,false
@@ -88,7 +88,7 @@ terraform-provider-rancher2,1.12.0,true,true,0.12.0,true,true,true
 terraform-provider-random,1.11.5,false,true,0.12.0-alpha4.0.20190424121927-9327eedb0417,false,true,false
 terraform-provider-rightscale,1.11.5,false,true,0.11.12-beta1.0.20190214175014-182daa619826,false,true,false
 terraform-provider-rundeck,1.11.6,false,true,0.12.1,true,true,false
-terraform-provider-runscope,1.11.5,false,true,0.12.2,true,true,false
+terraform-provider-runscope,1.11.5,false,true,0.12.2,true,false,false
 terraform-provider-scaffolding,1.9.1,false,false,,false,true,false
 terraform-provider-scaleway,1.11.5,false,true,0.12.1,true,true,false
 terraform-provider-selectel,1.12.0,true,true,0.12.2,true,true,true
@@ -100,7 +100,7 @@ terraform-provider-statuscake,1.11.5,false,true,0.12.0,true,true,false
 terraform-provider-telefonicaopencloud,1.11.0,false,false,,false,true,false
 terraform-provider-template,1.11.0,false,true,0.12.0-alpha4.0.20190424121927-9327eedb0417,false,true,false
 terraform-provider-tencentcloud,1.11.5,false,true,0.12.3,true,true,false
-terraform-provider-terraform,1.9.0,false,false,,false,true,false
+terraform-provider-terraform,1.9.0,false,false,,false,false,false
 terraform-provider-tfe,1.11.4,false,true,0.12.0,true,true,false
 terraform-provider-tls,1.11.0,false,true,0.12.2,true,true,false
 terraform-provider-triton,1.11.0,false,false,,false,true,false
