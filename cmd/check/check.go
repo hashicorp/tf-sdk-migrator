@@ -104,24 +104,20 @@ func (c *command) Run(args []string) int {
 		}
 	}
 
-	SDKVersionSatisfiesConstraint := false
-	SDKVersion := ""
-	if providerUsesGoModules {
-		if !csv {
-			ui.Output("Checking version of github.com/hashicorp/terraform SDK used in provider...")
+	if !csv {
+		ui.Output("Checking version of github.com/hashicorp/terraform SDK used in provider...")
+	}
+	SDKVersion, SDKVersionSatisfiesConstraint, err := CheckProviderSDKVersion(providerPath)
+	if !csv {
+		if SDKVersionSatisfiesConstraint {
+			ui.Info(fmt.Sprintf("SDK version %s: OK.", SDKVersion))
+		} else {
+			ui.Warn(fmt.Sprintf("SDK version does not satisfy constraint %s. Found SDK version: %s", SDKVersionConstraint, SDKVersion))
 		}
-		SDKVersion, SDKVersionSatisfiesConstraint, err := CheckProviderSDKVersion(providerPath)
-		if !csv {
-			if SDKVersionSatisfiesConstraint {
-				ui.Info(fmt.Sprintf("SDK version %s: OK.", SDKVersion))
-			} else {
-				ui.Warn(fmt.Sprintf("SDK version does not satisfy constraint %s. Found SDK version: %s", SDKVersionConstraint, SDKVersion))
-			}
-			if err != nil {
-				log.Printf("Error getting SDK version for provider %s: %s", providerPath, err)
-				return 1
-			}
-		}
+	}
+	if err != nil {
+		log.Printf("Error getting SDK version for provider %s: %s", providerPath, err)
+		return 1
 	}
 
 	if !csv {
@@ -144,7 +140,7 @@ func (c *command) Run(args []string) int {
 		ui.Output(fmt.Sprintf("go_version,go_version_satisfies_constraint,uses_go_modules,sdk_version,sdk_version_satisfies_constraint,does_not_use_removed_packages,all_constraints_satisfied\n%s,%t,%t,%s,%t,%t,%t", goVersion, goVersionSatisfiesConstraint, providerUsesGoModules, SDKVersion, SDKVersionSatisfiesConstraint, doesNotUseRemovedPackages, allConstraintsSatisfied))
 	} else {
 		if allConstraintsSatisfied {
-			ui.Info(fmt.Sprintf("/nAll constraints satisfied. Provider %s can be migrated to the new SDK.", providerPath))
+			ui.Info(fmt.Sprintf("\nAll constraints satisfied. Provider %s can be migrated to the new SDK.", providerPath))
 			return 0
 		}
 
