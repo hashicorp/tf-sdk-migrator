@@ -8,6 +8,11 @@ Eligibility data for current providers can be found in [./reports](./reports).
 
 ## Usage
 
+```sh
+go install github.com/kmoe/tf-sdk-migrator
+$GOBIN/tf-sdk-migrator
+```
+
 ### Build
 
 ```sh
