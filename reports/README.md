@@ -2,7 +2,7 @@
 
 ## Eligibility of providers
 
-`tf-sdk-migrator --csv check` was run against all Terraform providers found in the `terraform-providers` GitHub org, excepting `terraform-provider-cidr` (which is currently empty) and `terraform-provider-scaffolding` (which is not a provider).
+`tf-sdk-migrator --csv check` was run against the `master` branch of all Terraform providers found in the `terraform-providers` GitHub org, excepting `terraform-provider-cidr` (which is currently empty) and `terraform-provider-scaffolding` (which is not a provider).
 
 ### Analysis
 
