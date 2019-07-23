@@ -1,6 +1,6 @@
 # tf-sdk-migrator
 
-The Terraform provider plugin SDK, previously part of the [github.com/hashicorp/terraform](https://github.com/hashicorp/terraform) "Core" Go module, has been moved to a new Go module, [github.com/hashicorp/terraform-plugin-sdk](https://github.com/hashicorp/terraform-plugin-sdk). Terraform providers will in future import `hashcorp/terraform-plugin-sdk`.
+The Terraform provider plugin SDK, previously part of the [github.com/hashicorp/terraform](https://github.com/hashicorp/terraform) "Core" Go module, is being moved to a new Go module, [github.com/hashicorp/terraform-plugin-sdk](https://github.com/hashicorp/terraform-plugin-sdk). Terraform providers will in future import `hashcorp/terraform-plugin-sdk`.
 
 `tf-sdk-migrator` is a CLI tool which will migrate a Terraform provider to the new SDK module by rewriting import paths. `tf-sdk-migrator check` checks the eligibility of the Provider for migration.
 
