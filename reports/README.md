@@ -48,10 +48,4 @@ Of the 110 providers analysed, 23 satisfy all requirements for upgrading to the 
 
 Please see [./eligibility.csv](./eligibility.csv) for full data.
 
-This file was generated with:
-
-```sh
-echo -n "provider," > eligibility.csv
-go run . check --csv github.com/terraform-providers/terraform-provider-aws | head -n 1 >> eligibility.csv
-for f in $GOPATH/src/github.com/terraform-providers/*; do echo -n $(basename $f), >> eligibility.csv; go run . check --csv github.com/terraform-providers/$(basename $f) | tail -n 1 >> eligibility.csv; done
-```
+This file was generated with [./generate_eligibility_csv.sh](./generate_eligibility_csv.sh).
