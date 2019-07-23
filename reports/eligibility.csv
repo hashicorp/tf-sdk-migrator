@@ -1,4 +1,4 @@
-go_version,go_version_satisfies_constraint,uses_go_modules,sdk_version,sdk_version_satisfies_constraint,does_not_use_removed_packages,all_constraints_satisfied
+provider,go_version,go_version_satisfies_constraint,uses_go_modules,sdk_version,sdk_version_satisfies_constraint,does_not_use_removed_packages,all_constraints_satisfied
 terraform-provider-aci,,false,false,,false,true,false
 terraform-provider-acme,1.12.5,true,true,0.12.0,true,true,true
 terraform-provider-akamai,1.9.0,false,true,0.12.3,true,true,false
