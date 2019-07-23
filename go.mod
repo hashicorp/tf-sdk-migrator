@@ -1,4 +1,4 @@
-module github.com/kmoe/tf-sdk-migrator
+module github.com/hashicorp/tf-sdk-migrator
 
 go 1.12
 

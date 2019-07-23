@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kmoe/tf-sdk-migrator/util"
+	"github.com/hashicorp/tf-sdk-migrator/util"
 )
 
 const REMOVED_PACKAGES = `github.com/hashicorp/terraform/backend

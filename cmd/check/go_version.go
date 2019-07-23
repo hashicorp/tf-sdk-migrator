@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	version "github.com/hashicorp/go-version"
-	"github.com/kmoe/tf-sdk-migrator/util"
+	"github.com/hashicorp/tf-sdk-migrator/util"
 )
 
 // .go-version file contains the Go version as a string, followed by \n

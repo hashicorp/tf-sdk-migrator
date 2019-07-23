@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/kmoe/tf-sdk-migrator/cmd/check"
+	"github.com/hashicorp/tf-sdk-migrator/cmd/check"
 	"github.com/mitchellh/cli"
 )
 

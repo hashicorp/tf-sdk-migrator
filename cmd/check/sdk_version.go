@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	version "github.com/hashicorp/go-version"
-	"github.com/kmoe/tf-sdk-migrator/util"
+	"github.com/hashicorp/tf-sdk-migrator/util"
 )
 
 func ReadSDKVersionFromGoModFile(providerPath string) (*version.Version, error) {
