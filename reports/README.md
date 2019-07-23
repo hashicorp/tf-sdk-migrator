@@ -6,7 +6,18 @@
 
 ### Analysis
 
-TBD once the train wifi lets me download csvkit.
+#### Use of removed SDK packages
+
+Providers currently using removed SDK packages are:
+ - `terraform-provider-aws`
+ - `terraform-provider-nutanix`
+ - `terraform-provider-runscope`
+
+All of these use only `github.com/hashicorp/terraform/flatmap`.
+
+ - `terraform-provider-terraform`
+
+This provider uses `github.com/hashicorp/terraform/backend` and `github.com/hashicorp/terraform/backend/init`.
 
 ### Data
 
