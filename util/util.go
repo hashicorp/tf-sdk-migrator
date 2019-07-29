@@ -2,11 +2,11 @@ package util
 
 import (
 	"fmt"
-	"go/ast"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	refs "github.com/radeksimko/go-refs/parser"
@@ -81,26 +81,19 @@ func FindImportedPackages(filePath string, packagesToFind []string) (foundPackag
 
 	packages := make(map[string]bool)
 
-	ast.Inspect(f, func(node ast.Node) bool {
-		if node == nil {
-			return false
+	for _, impSpec := range f.Imports {
+		impPath, err := strconv.Unquote(impSpec.Path.Value)
+		if err != nil {
+			log.Print(err)
 		}
-
-		switch node.(type) {
-		case *ast.ImportSpec:
-			importPath := node.(*ast.ImportSpec).Path.Value
-
-			for i := range packagesToFind {
-				if packagesToFind[i] == strings.Trim(importPath, "\"") {
-					packageName := packagesToFind[i]
-					packages[packageName] = true
-					break;
-				}
+		for i := range packagesToFind {
+			if packagesToFind[i] == impPath {
+				packageName := packagesToFind[i]
+				packages[packageName] = true
 			}
 		}
 
-		return true
-	})
+	}
 
 	foundPackages = make([]string, len(packages))
 	for k := range packages {
