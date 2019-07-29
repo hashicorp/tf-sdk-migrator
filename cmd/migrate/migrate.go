@@ -37,11 +37,17 @@ func CommandFactory() (cli.Command, error) {
 }
 
 func (c *command) Help() string {
-	return ""
+	return `Usage: tf-sdk-migrator migrate [--help] PATH
+
+  Migrates the Terraform provider at PATH to the new Terraform provider
+  SDK (v1).
+
+  Rewrites import paths and go.mod. No backup is made before files are
+  overwritten.`
 }
 
 func (c *command) Synopsis() string {
-	return ""
+	return "Migrates a Terraform provider to the new SDK (v1)."
 }
 
 func (c *command) Run(args []string) int {

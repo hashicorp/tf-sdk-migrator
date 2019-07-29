@@ -25,22 +25,36 @@ go build
 Checks whether a Terraform provider is ready to migrate to the newly extracted Terraform SDK package. 
 
 ```sh
-tf-sdk-migrator check [--help] PATH
+tf-sdk-migrator check [--help] [--csv] PATH
 ```
 
 Outputs a report containing:
- - Go version used in provider
+ - Go version used in provider (soft requirement)
  - Whether the provider uses Go modules
  - Version of `hashicorp/terraform` used
  - Whether the provider uses any `hashicorp/terraform` packages that are not in `hashicorp/terraform-plugin-sdk`
  
 The `--csv` flag will output values in CSV format.
 
-Exits 0 if the provider meets all the migration requirements, 1 otherwise.
+Exits 0 if the provider meets all the hard requirements, 1 otherwise.
 
-### Migrate to SDK module
+The Go version requirement is a "soft" requirement: it is strongly recommended to upgrade to Go version 1.12+ before migrating to the new SDK, but the migration can still be performed if this requirement is not met.
 
-Docs to be added.
+### Migrate to SDK module: `tf-sdk-migrator migrate`
+
+Migrates the Terraform provider to the new extracted SDK (`github.com/hashicorp/terraform-plugin-sdk`), replacing references to the old SDK (`github.com/hashicorp/terraform`**.
+
+No backup is made before modifying files.
+
+```sh
+tf-sdk-migrator migrate [--help] PATH
+```
+
+The eligibility check will be run first: migration will not proceed if this check fails.
+
+The migration tool will then make the following changes:
+ - `go.mod`: replace `github.com/hashicorp/terraform` dependency with `github.com/hashicorp/terraform-plugin-sdk`
+ - rewrite import paths in all provider `.go` files (except in `vendor/`) accordingly
 
 ---
 
