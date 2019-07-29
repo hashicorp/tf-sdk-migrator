@@ -142,6 +142,9 @@ func (c *command) Run(args []string) int {
 		if allConstraintsSatisfied {
 			ui.Info(fmt.Sprintf("\nAll constraints satisfied. Provider %s can be migrated to the new SDK.", providerPath))
 			return 0
+		} else if providerUsesGoModules && SDKVersionSatisfiesConstraint && doesNotUseRemovedPackages {
+			ui.Info(fmt.Sprintf("\nProvider %s can be migrated to the new SDK, but Go version %s is recommended.", providerPath, goVersionConstraint))
+			return 0
 		}
 
 		ui.Warn("\nSome constraints not satisfied. Please resolve these before migrating to the new SDK.")
