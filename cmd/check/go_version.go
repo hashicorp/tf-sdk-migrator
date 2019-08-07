@@ -7,6 +7,7 @@ import (
 
 	version "github.com/hashicorp/go-version"
 	"github.com/hashicorp/tf-sdk-migrator/util"
+	"github.com/radeksimko/mod/modfile"
 )
 
 // .go-version file contains the Go version as a string, followed by \n
@@ -27,22 +28,22 @@ func ReadGoVersionFromGoVersionFile(providerPath string) (*version.Version, erro
 // the "go" directive sets the expected language version
 // see https://tip.golang.org/cmd/go/#hdr-The_go_mod_file
 func ReadGoVersionFromGoModFile(providerPath string) (*version.Version, error) {
-	content, err := ioutil.ReadFile(providerPath + "/go.mod")
+	path := providerPath + "/go.mod"
+	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	lines := strings.Split(string(content), "\n")
-
-	goLine := util.SearchLinesPrefix(lines, "go ", 0)
-	if goLine == -1 {
-		return nil, errors.New("no 'go' directive in go.mod")
+	pf, err := modfile.Parse(path, content, nil)
+	if err != nil {
+		return nil, err
 	}
 
-	v := strings.TrimLeft(lines[goLine], "go ")
-	v = strings.TrimSpace(v)
+	if pf.Go == nil {
+		return nil, errors.New("go statement not found")
+	}
 
-	return version.NewVersion(v)
+	return version.NewVersion(pf.Go.Version)
 }
 
 func ReadGoVersionFromTravisConfig(providerPath string) (*version.Version, error) {
