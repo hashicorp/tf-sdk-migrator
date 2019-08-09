@@ -23,5 +23,10 @@ github.com/posener/complete/cmd
 github.com/posener/complete/match
 # github.com/radeksimko/go-refs v0.0.0-20190614111518-1b15b5989e59
 github.com/radeksimko/go-refs/parser
-# golang.org/x/sys v0.0.0-20180823144017-11551d06cbcc
+# github.com/radeksimko/mod v0.0.0-20190807092412-93f771451dae
+github.com/radeksimko/mod/modfile
+github.com/radeksimko/mod/lazyregexp
+github.com/radeksimko/mod/module
+github.com/radeksimko/mod/semver
+# golang.org/x/sys v0.0.0-20190412213103-97732733099d
 golang.org/x/sys/unix

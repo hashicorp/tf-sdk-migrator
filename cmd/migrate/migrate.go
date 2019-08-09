@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/tf-sdk-migrator/cmd/check"
 	"github.com/hashicorp/tf-sdk-migrator/util"
 	"github.com/mitchellh/cli"
+	"github.com/radeksimko/mod/modfile"
 )
 
 const (
@@ -134,16 +135,25 @@ func RewriteGoMod(providerPath string) error {
 		return err
 	}
 
-	lines := strings.Split(string(input), "\n")
-
-	// TODO: case where there is only one package in go.mod
-	for i, line := range lines {
-		if strings.HasPrefix(line, "\t"+oldSDKImportPath+" ") {
-			lines[i] = "\t" + newSDKPackagePath + " " + newSDKVersion
-		}
+	pf, err := modfile.Parse(goModPath, input, nil)
+	if err != nil {
+		return err
 	}
-	output := strings.Join(lines, "\n")
-	err = ioutil.WriteFile(goModPath, []byte(output), 0644)
+
+	err = pf.DropRequire(oldSDKImportPath)
+	if err != nil {
+		return err
+	}
+
+	pf.AddNewRequire(newSDKPackagePath, newSDKVersion, false)
+
+	pf.Cleanup()
+	formattedOutput, err := pf.Format()
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(goModPath, formattedOutput, 0644)
 	if err != nil {
 		return err
 	}

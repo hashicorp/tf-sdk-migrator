@@ -1,31 +1,41 @@
 package check
 
 import (
-	"errors"
+	"fmt"
 	"io/ioutil"
-	"strings"
 
-	"github.com/hashicorp/go-multierror"
 	version "github.com/hashicorp/go-version"
-	"github.com/hashicorp/tf-sdk-migrator/util"
+	"github.com/radeksimko/mod/modfile"
+	"github.com/radeksimko/mod/module"
 )
 
 func ReadSDKVersionFromGoModFile(providerPath string) (*version.Version, error) {
-	content, err := ioutil.ReadFile(providerPath + "/go.mod")
+	path := providerPath + "/go.mod"
+	content, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, multierror.Append(err, errors.New("could not read go.mod file for provider "+providerPath))
+		return nil, fmt.Errorf("could not read go.mod file for provider %s", providerPath)
 	}
 
-	lines := strings.Split(string(content), "\n")
-
-	terraformPackageLine := util.SearchLines(lines, terraformDependencyPath+" ", 0)
-	if terraformPackageLine == -1 {
-		return nil, errors.New("could not find github/hashicorp/terraform dependency for provider " + providerPath)
+	pf, err := modfile.Parse(path, content, nil)
+	if err != nil {
+		return nil, err
 	}
 
-	v := strings.TrimSpace(lines[terraformPackageLine])
-	v = strings.TrimLeft(v, "require ")
-	v = strings.TrimLeft(v, terraformDependencyPath+" ")
+	mv, err := findMatchingRequireStmt(pf.Require, terraformDependencyPath)
+	if err != nil {
+		return nil, err
+	}
 
-	return version.NewVersion(v)
+	return version.NewVersion(mv.Version)
+}
+
+func findMatchingRequireStmt(requires []*modfile.Require, path string) (module.Version, error) {
+	for _, requireStmt := range requires {
+		mod := requireStmt.Mod
+		if mod.Path == path {
+			return mod, nil
+		}
+	}
+
+	return module.Version{}, fmt.Errorf("require statement with path %q not found", path)
 }
