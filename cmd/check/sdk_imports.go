@@ -2,8 +2,6 @@ package check
 
 import (
 	"strings"
-
-	"github.com/hashicorp/tf-sdk-migrator/util"
 )
 
 const REMOVED_PACKAGES = `github.com/hashicorp/terraform/backend
@@ -78,20 +76,16 @@ github.com/hashicorp/terraform/tools/loggraphdiff
 github.com/hashicorp/terraform/tools/terraform-bundle
 github.com/hashicorp/terraform/tools/terraform-bundle/e2etest`
 
-func CheckSDKPackageImports(providerPath string) (removedPackagesInUse []string, doesNotUseRemovedPackages bool, e error) {
-	allImportPaths, err := util.GoListPackageImports(providerPath)
-	if err != nil {
-		return nil, false, err
-	}
+func CheckSDKPackageImports(providerImportDetails *ProviderImportDetails) (removedPackagesInUse []string, e error) {
 
 	removedPackages := strings.Split(REMOVED_PACKAGES, "\n")
 	removedPackagesInUse = []string{}
 
 	for _, p := range removedPackages {
-		if allImportPaths[p] {
+		if providerImportDetails.AllImportPathsHash[p] {
 			removedPackagesInUse = append(removedPackagesInUse, p)
 		}
 	}
 
-	return removedPackagesInUse, len(removedPackagesInUse) == 0, nil
+	return removedPackagesInUse, nil
 }
