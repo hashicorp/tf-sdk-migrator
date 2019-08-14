@@ -21,7 +21,7 @@ import (
 
 const (
 	oldSDKImportPath  = "github.com/hashicorp/terraform"
-	newSDKImportPath  = "github.com/hashicorp/terraform-plugin-sdk/sdk"
+	newSDKImportPath  = "github.com/hashicorp/terraform-plugin-sdk"
 	newSDKPackagePath = "github.com/hashicorp/terraform-plugin-sdk"
 	newSDKVersion     = "v0.0.1"
 )

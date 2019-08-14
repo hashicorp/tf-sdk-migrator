@@ -1,8 +1,6 @@
 package check
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/tf-sdk-migrator/util"
@@ -81,21 +79,19 @@ github.com/hashicorp/terraform/tools/terraform-bundle
 github.com/hashicorp/terraform/tools/terraform-bundle/e2etest`
 
 func CheckSDKPackageImports(providerPath string) (removedPackagesInUse []string, doesNotUseRemovedPackages bool, e error) {
+	allImportPaths, err := util.GoListPackageImports(providerPath)
+	if err != nil {
+		return nil, false, err
+	}
+
 	removedPackages := strings.Split(REMOVED_PACKAGES, "\n")
 	removedPackagesInUse = []string{}
 
-	filepath.Walk(providerPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	for _, p := range removedPackages {
+		if allImportPaths[p] {
+			removedPackagesInUse = append(removedPackagesInUse, p)
 		}
-		if info.IsDir() && info.Name() == "vendor" {
-			return filepath.SkipDir
-		}
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".go") {
-			removedPackagesInUse = append(removedPackagesInUse, util.FindImportedPackages(path, removedPackages)...)
-		}
-		return nil
-	})
+	}
 
 	return removedPackagesInUse, len(removedPackagesInUse) == 0, nil
 }
