@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"io"
 	"os"
@@ -12,7 +13,7 @@ import (
 	"path"
 
 	"github.com/hashicorp/tf-sdk-migrator/util"
-	"github.com/radeksimko/go-refs/parser"
+	refsParser "github.com/radeksimko/go-refs/parser"
 )
 
 type Offence struct {
@@ -151,6 +152,7 @@ func CheckSDKPackageRefs(providerImportDetails *ProviderImportDetails) ([]*Offen
 	offences := make([]*Offence, 0, 0)
 
 	for _, d := range deprecations {
+		fset := token.NewFileSet()
 		files, err := filesWhichImport(providerImportDetails, d.ImportPath)
 		if err != nil {
 			return nil, err
@@ -159,18 +161,18 @@ func CheckSDKPackageRefs(providerImportDetails *ProviderImportDetails) ([]*Offen
 		foundPositions := make([]*token.Position, 0, 0)
 
 		for _, filePath := range files {
-			f, err := parser.ParseFile(filePath)
+			f, err := parser.ParseFile(fset, filePath, nil, 0)
 			if err != nil {
 				return nil, err
 			}
 
-			identifiers, err := parser.FindPackageReferences(f, d.ImportPath)
+			identifiers, err := refsParser.FindPackageReferences(f, d.ImportPath)
 			if err != nil {
 				// package not imported in this file
-				break
+				continue
 			}
 
-			positions, err := findIdentifierPositions(identifiers, d.Identifier)
+			positions, err := findIdentifierPositions(fset, identifiers, d.Identifier)
 			if err != nil {
 				return nil, err
 			}
@@ -191,8 +193,7 @@ func CheckSDKPackageRefs(providerImportDetails *ProviderImportDetails) ([]*Offen
 	return offences, nil
 }
 
-func findIdentifierPositions(nodes []ast.Node, ident *ast.Ident) ([]*token.Position, error) {
-	fset := token.NewFileSet()
+func findIdentifierPositions(fset *token.FileSet, nodes []ast.Node, ident *ast.Ident) ([]*token.Position, error) {
 	positions := make([]*token.Position, 0, 0)
 
 	for _, node := range nodes {

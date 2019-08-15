@@ -216,7 +216,6 @@ func CheckSDKPackageImportsAndRefs(providerPath string) (removedPackagesInUse []
 	}
 
 	packageRefsOffences, err := CheckSDKPackageRefs(providerImportDetails)
-	// format teh offences
 	if err != nil {
 		return nil, nil, false, err
 	}
