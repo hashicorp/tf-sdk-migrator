@@ -48,6 +48,16 @@ var deprecations = []*identDeprecation{
 		ast.NewIdent("UserAgentString"),
 		"Please don't use this",
 	},
+	{
+		"github.com/hashicorp/terraform/config",
+		ast.NewIdent("NewRawConfig"),
+		"terraform.NewResourceConfig and config.NewRawConfig have been removed, please use terraform.NewResourceConfigRaw",
+	},
+	{
+		"github.com/hashicorp/terraform/terraform",
+		ast.NewIdent("NewResourceConfig"),
+		"terraform.NewResourceConfig and config.NewRawConfig have been removed, please use terraform.NewResourceConfigRaw",
+	},
 }
 
 // Package represents the subset of `go list` output we are interested in
