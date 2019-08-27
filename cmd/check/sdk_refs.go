@@ -31,17 +31,22 @@ var deprecations = []*identDeprecation{
 	{
 		"github.com/hashicorp/terraform/httpclient",
 		ast.NewIdent("UserAgentString"),
-		"Please don't use this",
+		"This function has been removed, please use httpclient.TerraformUserAgent(version) instead",
+	},
+	{
+		"github.com/hashicorp/terraform/httpclient",
+		ast.NewIdent("New"),
+		"This function has been removed, please use DefaultPooledClient() with custom Transport/round-tripper from github.com/hashicorp/go-cleanhttp instead",
 	},
 	{
 		"github.com/hashicorp/terraform/terraform",
 		ast.NewIdent("UserAgentString"),
-		"Please don't use this",
+		"This function has been removed, please use httpclient.TerraformUserAgent(version) instead",
 	},
 	{
 		"github.com/hashicorp/terraform/terraform",
 		ast.NewIdent("VersionString"),
-		"Please don't use this",
+		"This function has been removed, please use helper/schema's Provider.TerraformVersion available from Provider.ConfigureFunc",
 	},
 	{
 		"github.com/hashicorp/terraform/config",
