@@ -6,11 +6,17 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-
-	refs "github.com/radeksimko/go-refs/parser"
 )
+
+func StringSliceContains(ss []string, s string) bool {
+	for _, i := range ss {
+		if i == s {
+			return true
+		}
+	}
+	return false
+}
 
 func ReadOneOf(dir string, filenames ...string) (fullpath string, content []byte, err error) {
 	for _, filename := range filenames {
@@ -70,35 +76,4 @@ func GetProviderPath(providerRepoName string) (string, error) {
 	}
 
 	return "", fmt.Errorf("Could not find %s in working directory or GOPATH: %s", providerRepoName, gopath)
-}
-
-func FindImportedPackages(filePath string, packagesToFind []string) (foundPackages []string) {
-	// TODO: check file exists so ParseFile doesn't panic
-	f, err := refs.ParseFile(filePath)
-	if err != nil {
-		log.Print(err)
-	}
-
-	packages := make(map[string]bool)
-
-	for _, impSpec := range f.Imports {
-		impPath, err := strconv.Unquote(impSpec.Path.Value)
-		if err != nil {
-			log.Print(err)
-		}
-		for i := range packagesToFind {
-			if packagesToFind[i] == impPath {
-				packageName := packagesToFind[i]
-				packages[packageName] = true
-			}
-		}
-
-	}
-
-	foundPackages = make([]string, len(packages))
-	for k := range packages {
-		foundPackages = append(foundPackages, k)
-	}
-
-	return foundPackages
 }
