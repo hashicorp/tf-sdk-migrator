@@ -23,7 +23,7 @@ github.com/posener/complete
 github.com/posener/complete/cmd/install
 github.com/posener/complete/cmd
 github.com/posener/complete/match
-# github.com/radeksimko/go-refs v0.0.0-20190614111518-1b15b5989e59
+# github.com/radeksimko/go-refs v0.0.0-20190823125319-880a3294a1a0
 github.com/radeksimko/go-refs/parser
 # github.com/radeksimko/mod v0.0.0-20190807092412-93f771451dae
 github.com/radeksimko/mod/modfile

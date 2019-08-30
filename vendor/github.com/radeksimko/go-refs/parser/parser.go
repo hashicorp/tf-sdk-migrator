@@ -55,6 +55,12 @@ func FindPackageReferences(f *ast.File, importPath string) ([]ast.Node, error) {
 				return true
 			}
 
+			if ident.Obj != nil {
+				// Avoid reporting references to local variables
+				// which may have the same name as package
+				return true
+			}
+
 			refs = append(refs, selector.Sel)
 		}
 

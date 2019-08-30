@@ -22,6 +22,8 @@ github.com/posener/complete v1.1.1 h1:ccV59UEOTzVDnDUEFdT95ZzHVZ+5+158q8+SJb2QV5
 github.com/posener/complete v1.1.1/go.mod h1:em0nMJCgc9GFtwrmVmEMR/ZL6WyhyjMBndrE9hABlRI=
 github.com/radeksimko/go-refs v0.0.0-20190614111518-1b15b5989e59 h1:spSVb40pzPe4JoZLno+/E7Eq5Y0I21DFwdb32g/GN+4=
 github.com/radeksimko/go-refs v0.0.0-20190614111518-1b15b5989e59/go.mod h1:PYFsT0d8q5IGFGbiXhnVA5sQFXxPRNXf7CS/IL90rHY=
+github.com/radeksimko/go-refs v0.0.0-20190823125319-880a3294a1a0 h1:wgpRbINntHeCGMi2xqGfLN1havFatiACGZ7q+yKqJyw=
+github.com/radeksimko/go-refs v0.0.0-20190823125319-880a3294a1a0/go.mod h1:PYFsT0d8q5IGFGbiXhnVA5sQFXxPRNXf7CS/IL90rHY=
 github.com/radeksimko/mod v0.0.0-20190807092412-93f771451dae h1:I7Nl7r9VPplepwIlnEODWuesa2/CurhkwoQGCl4MZj8=
 github.com/radeksimko/mod v0.0.0-20190807092412-93f771451dae/go.mod h1:Q2IM8KSMt66rTOMAXh3BvCD8bYed5rx/ITZ/zNqYakc=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
