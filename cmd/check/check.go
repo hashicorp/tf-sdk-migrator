@@ -19,7 +19,7 @@ import (
 const (
 	CommandName             = "check"
 	goVersionConstraint     = ">=1.12"
-	SDKVersionConstraint    = ">=0.12.6"
+	sdkVersionConstraint    = ">=0.12.6"
 	terraformDependencyPath = "github.com/hashicorp/terraform"
 )
 
@@ -109,12 +109,12 @@ func (c *command) Run(args []string) int {
 	if !csv {
 		ui.Output("Checking version of github.com/hashicorp/terraform SDK used in provider...")
 	}
-	SDKVersion, SDKVersionSatisfiesConstraint, err := CheckProviderSDKVersion(providerPath)
+	sdkVersion, sdkVersionSatisfiesConstraint, err := CheckProviderSDKVersion(providerPath)
 	if !csv {
-		if SDKVersionSatisfiesConstraint {
-			ui.Info(fmt.Sprintf("SDK version %s: OK.", SDKVersion))
+		if sdkVersionSatisfiesConstraint {
+			ui.Info(fmt.Sprintf("SDK version %s: OK.", sdkVersion))
 		} else {
-			ui.Warn(fmt.Sprintf("SDK version does not satisfy constraint %s. Found SDK version: %s", SDKVersionConstraint, SDKVersion))
+			ui.Warn(fmt.Sprintf("SDK version does not satisfy constraint %s. Found SDK version: %s", sdkVersionConstraint, sdkVersion))
 		}
 	}
 	if err != nil {
@@ -138,14 +138,14 @@ func (c *command) Run(args []string) int {
 			ui.Warn(fmt.Sprintf("Deprecated SDK identifiers in use: %+v", removedIdentsInUse))
 		}
 	}
-	allConstraintsSatisfied := goVersionSatisfiesConstraint && providerUsesGoModules && SDKVersionSatisfiesConstraint && doesNotUseRemovedPackagesOrIdents
+	allConstraintsSatisfied := goVersionSatisfiesConstraint && providerUsesGoModules && sdkVersionSatisfiesConstraint && doesNotUseRemovedPackagesOrIdents
 	if csv {
-		ui.Output(fmt.Sprintf("go_version,go_version_satisfies_constraint,uses_go_modules,sdk_version,sdk_version_satisfies_constraint,does_not_use_removed_packages,all_constraints_satisfied\n%s,%t,%t,%s,%t,%t,%t", goVersion, goVersionSatisfiesConstraint, providerUsesGoModules, SDKVersion, SDKVersionSatisfiesConstraint, doesNotUseRemovedPackagesOrIdents, allConstraintsSatisfied))
+		ui.Output(fmt.Sprintf("go_version,go_version_satisfies_constraint,uses_go_modules,sdk_version,sdk_version_satisfies_constraint,does_not_use_removed_packages,all_constraints_satisfied\n%s,%t,%t,%s,%t,%t,%t", goVersion, goVersionSatisfiesConstraint, providerUsesGoModules, sdkVersion, sdkVersionSatisfiesConstraint, doesNotUseRemovedPackagesOrIdents, allConstraintsSatisfied))
 	} else {
 		if allConstraintsSatisfied {
 			ui.Info(fmt.Sprintf("\nAll constraints satisfied. Provider %s can be migrated to the new SDK.", providerPath))
 			return 0
-		} else if providerUsesGoModules && SDKVersionSatisfiesConstraint && doesNotUseRemovedPackagesOrIdents {
+		} else if providerUsesGoModules && sdkVersionSatisfiesConstraint && doesNotUseRemovedPackagesOrIdents {
 			ui.Info(fmt.Sprintf("\nProvider %s can be migrated to the new SDK, but Go version %s is recommended.", providerPath, goVersionConstraint))
 			return 0
 		}
@@ -179,8 +179,8 @@ func CheckForGoModules(providerPath string) (usingModules bool) {
 
 // since use of Go modules is necessary for SDKv1 upgrade eligibility,
 // we only run this check if the Go modules check has already passed
-func CheckProviderSDKVersion(providerPath string) (SDKVersion string, satisfiesConstraint bool, error error) {
-	c, err := version.NewConstraint(SDKVersionConstraint)
+func CheckProviderSDKVersion(providerPath string) (sdkVersion string, satisfiesConstraint bool, error error) {
+	c, err := version.NewConstraint(sdkVersionConstraint)
 
 	v, err := ReadSDKVersionFromGoModFile(providerPath)
 	if err != nil {
