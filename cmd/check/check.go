@@ -7,6 +7,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/hashicorp/go-multierror"
 	version "github.com/hashicorp/go-version"
@@ -81,7 +83,7 @@ func (c *command) Run(args []string) int {
 		},
 	}
 	if !csv {
-		ui.Output("Checking Go version used in provider...")
+		ui.Output("Checking Go runtime version ...")
 	}
 	goVersion, goVersionSatisfiesConstraint := CheckGoVersion(providerPath)
 	if !csv {
@@ -157,30 +159,14 @@ func (c *command) Run(args []string) int {
 func CheckGoVersion(providerPath string) (goVersion string, satisfiesConstraint bool) {
 	c, err := version.NewConstraint(goVersionConstraint)
 
-	v, err := ReadGoVersionFromGoVersionFile(providerPath)
+	runtimeVersion := strings.TrimLeft(runtime.Version(), "go")
+	v, err := version.NewVersion(runtimeVersion)
 	if err != nil {
-		log.Printf("no Go version found in .go-version file for %s: %s", providerPath, err)
-	} else if v != nil {
-		return v.String(), c.Check(v)
+		log.Printf("[ERROR] Could not parse Go version %s", runtimeVersion)
+		return "", false
 	}
 
-	v, err = ReadGoVersionFromGoModFile(providerPath)
-	if err != nil {
-		log.Printf("no go version found in go.mod file for %s: %s", providerPath, err)
-	} else if v != nil {
-		return v.String(), c.Check(v)
-	}
-
-	v, err = ReadGoVersionFromTravisConfig(providerPath)
-	if err != nil {
-		log.Printf("no go version found in Travis config file for %s: %s", providerPath, err)
-	} else if v != nil {
-		return v.String(), c.Check(v)
-	}
-
-	log.Printf("failed to detect Go version for provider %s", providerPath)
-
-	return "", false
+	return runtimeVersion, c.Check(v)
 }
 
 func CheckForGoModules(providerPath string) (usingModules bool) {
