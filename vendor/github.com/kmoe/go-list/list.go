@@ -3,7 +3,9 @@ package list
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"time"
@@ -107,17 +109,35 @@ type ModuleError struct {
 	Err string // the error itself
 }
 
-func GoList(workDir string, path string) ([]Package, error) {
-	cmd := exec.Command("go", "list", "-json", path)
+type ExecError struct {
+	Err    error
+	Stderr string
+}
+
+func (ee *ExecError) Error() string {
+	return fmt.Sprintf("%s\n%s", ee.Err, ee.Stderr)
+}
+
+func NewExecError(err error, stderr string) *ExecError {
+	return &ExecError{err, stderr}
+}
+
+func GoList(workDir string, path string, args ...string) ([]Package, error) {
+	cmdName := "go"
+	cmdArgs := append([]string{"list", "-json"}, args...)
+	cmdArgs = append(cmdArgs, path)
+	cmd := exec.Command(cmdName, cmdArgs...)
 	cmd.Dir = workDir
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
+	log.Printf("[DEBUG] Executing command %s %q", cmdName, cmdArgs)
+
 	err := cmd.Run()
 	if err != nil {
-		return nil, err
+		return nil, NewExecError(err, stderr.String())
 	}
 
 	packages := []Package{}
@@ -138,8 +158,11 @@ func GoList(workDir string, path string) ([]Package, error) {
 	return packages, nil
 }
 
-func GoListModule(workDir string, path string) ([]Module, error) {
-	cmd := exec.Command("go", "list", "-m", "-json", path)
+func GoListModule(workDir string, path string, args ...string) ([]Module, error) {
+	cmdName := "go"
+	cmdArgs := append([]string{"list", "-m", "-json"}, args...)
+	cmdArgs = append(cmdArgs, path)
+	cmd := exec.Command(cmdName, cmdArgs...)
 	cmd.Env = append(os.Environ(), "GO111MODULE=on")
 	cmd.Dir = workDir
 
@@ -147,9 +170,11 @@ func GoListModule(workDir string, path string) ([]Module, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
+	log.Printf("[DEBUG] Executing command %s %q", cmdName, cmdArgs)
+
 	err := cmd.Run()
 	if err != nil {
-		return nil, err
+		return nil, NewExecError(err, stderr.String())
 	}
 
 	modules := []Module{}
