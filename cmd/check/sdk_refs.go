@@ -78,7 +78,7 @@ type ProviderPackage struct {
 }
 
 func GoListPackageImports(providerPath string) (*ProviderImportDetails, error) {
-	packages, err := goList.GoList(providerPath, "./...")
+	packages, err := goList.GoList(providerPath, "./...", "-mod=vendor")
 	if err != nil {
 		return nil, err
 	}
