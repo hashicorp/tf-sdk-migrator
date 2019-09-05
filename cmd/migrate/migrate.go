@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"go/parser"
 	"go/printer"
@@ -20,10 +21,11 @@ import (
 )
 
 const (
+	CommandName       = "migrate"
 	oldSDKImportPath  = "github.com/hashicorp/terraform"
 	newSDKImportPath  = "github.com/hashicorp/terraform-plugin-sdk"
 	newSDKPackagePath = "github.com/hashicorp/terraform-plugin-sdk"
-	newSDKVersion     = "v0.0.1"
+	defaultSDKVersion = "v0.0.1"
 )
 
 var printConfig = printer.Config{
@@ -38,13 +40,22 @@ func CommandFactory() (cli.Command, error) {
 }
 
 func (c *command) Help() string {
-	return `Usage: tf-sdk-migrator migrate [--help] PATH
+	return `Usage: tf-sdk-migrator migrate [--help] [--sdk-version SDK_VERSION] [PATH]
 
   Migrates the Terraform provider at PATH to the new Terraform provider
-  SDK (v1).
+  SDK, defaulting to version ` + defaultSDKVersion + `.
+
+  PATH is resolved relative to $GOPATH/src/. If PATH is not supplied, it is assumed
+  that the current working directory contains a Terraform provider.
+
+  Optionally, an SDK_VERSION can be passed, which is parsed as a Go module
+  release version. For example: v1.0.1, latest, master.
 
   Rewrites import paths and go.mod. No backup is made before files are
-  overwritten.`
+  overwritten.
+
+Example:
+  tf-sdk-migrator migrate --sdk-version master github.com/terraform-providers/terraform-provider-local`
 }
 
 func (c *command) Synopsis() string {
@@ -52,26 +63,31 @@ func (c *command) Synopsis() string {
 }
 
 func (c *command) Run(args []string) int {
-	// TODO --dry-run flag
+	flags := flag.NewFlagSet(CommandName, flag.ExitOnError)
+	var sdkVersion string
+	flags.StringVar(&sdkVersion, "sdk-version", defaultSDKVersion, "SDK version")
+	flags.Parse(args)
 
+	var providerRepoName string
 	var providerPath string
-	if len(args) > 0 {
+	if flags.NArg() == 1 {
 		var err error
-		providerRepoName := args[len(args)-1]
+		providerRepoName = flags.Args()[0]
 		providerPath, err = util.GetProviderPath(providerRepoName)
 		if err != nil {
 			log.Printf("Error finding provider %s: %s", providerRepoName, err)
 			return 1
 		}
-	} else {
+	} else if flags.NArg() == 0 {
 		var err error
 		providerPath, err = os.Getwd()
 		if err != nil {
 			log.Printf("Error finding current working directory: %s", err)
 			return 1
 		}
+	} else {
+		return cli.RunResultHelp
 	}
-	log.Println(providerPath)
 
 	ui := &cli.ColoredUi{
 		OutputColor: cli.UiColorNone,
@@ -89,14 +105,19 @@ func (c *command) Run(args []string) int {
 	if err != nil {
 		ui.Error(fmt.Sprintf("Error running eligibility check: %s", err))
 	}
-	returnCode := checkCmd.Run(args)
+
+	var checkArgs []string
+	if providerRepoName != "" {
+		checkArgs = []string{providerRepoName}
+	}
+	returnCode := checkCmd.Run(checkArgs)
 	if returnCode != 0 {
 		ui.Warn("Provider failed eligibility check for migration to the new SDK. Please see warnings above.")
 		return 1
 	}
 
 	ui.Output("Rewriting provider go.mod file...")
-	err = RewriteGoMod(providerPath)
+	err = RewriteGoMod(providerPath, sdkVersion)
 	if err != nil {
 		ui.Error(fmt.Sprintf("Error rewriting go.mod file: %s", err))
 		return 1
@@ -123,11 +144,11 @@ func (c *command) Run(args []string) int {
 		return 1
 	}
 
-	ui.Info(fmt.Sprintf("Success! Provider %s is migrated to %s %s.", providerPath, newSDKPackagePath, newSDKVersion))
+	ui.Info(fmt.Sprintf("Success! Provider %s is migrated to %s %s.", providerPath, newSDKPackagePath, sdkVersion))
 	return 0
 }
 
-func RewriteGoMod(providerPath string) error {
+func RewriteGoMod(providerPath string, sdkVersion string) error {
 	goModPath := providerPath + "/go.mod"
 
 	input, err := ioutil.ReadFile(goModPath)
@@ -145,7 +166,7 @@ func RewriteGoMod(providerPath string) error {
 		return err
 	}
 
-	pf.AddNewRequire(newSDKPackagePath, newSDKVersion, false)
+	pf.AddNewRequire(newSDKPackagePath, sdkVersion, false)
 
 	pf.Cleanup()
 	formattedOutput, err := pf.Format()
