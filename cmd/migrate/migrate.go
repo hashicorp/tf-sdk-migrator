@@ -90,8 +90,8 @@ func (c *command) Run(args []string) int {
 	}
 
 	ui := &cli.ColoredUi{
-		OutputColor: cli.UiColorNone,
-		InfoColor:   cli.UiColorBlue,
+		OutputColor: cli.UiColorBlue,
+		InfoColor:   cli.UiColorGreen,
 		ErrorColor:  cli.UiColorRed,
 		WarnColor:   cli.UiColorYellow,
 		Ui: &cli.BasicUi{
@@ -144,7 +144,11 @@ func (c *command) Run(args []string) int {
 		return 1
 	}
 
-	ui.Info(fmt.Sprintf("Success! Provider %s is migrated to %s %s.", providerPath, newSDKPackagePath, sdkVersion))
+	var prettyProviderName string
+	if providerRepoName != "" {
+		prettyProviderName = " " + providerRepoName
+	}
+	ui.Info(fmt.Sprintf("Success! Provider%s is migrated to %s %s.", prettyProviderName, newSDKPackagePath, sdkVersion))
 	return 0
 }
 
