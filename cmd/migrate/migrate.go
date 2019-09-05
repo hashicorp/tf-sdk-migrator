@@ -40,16 +40,22 @@ func CommandFactory() (cli.Command, error) {
 }
 
 func (c *command) Help() string {
-	return `Usage: tf-sdk-migrator migrate [--help] [--sdk-version SDK_VERSION] PATH
+	return `Usage: tf-sdk-migrator migrate [--help] [--sdk-version SDK_VERSION] [PATH]
 
   Migrates the Terraform provider at PATH to the new Terraform provider
   SDK, defaulting to version ` + defaultSDKVersion + `.
+
+  PATH is resolved relative to $GOPATH/src/. If PATH is not supplied, it is assumed
+  that the current working directory contains a Terraform provider.
 
   Optionally, an SDK_VERSION can be passed, which is parsed as a Go module
   release version. For example: v1.0.1, latest, master.
 
   Rewrites import paths and go.mod. No backup is made before files are
-  overwritten.`
+  overwritten.
+
+Example:
+  tf-sdk-migrator migrate --sdk-version master github.com/terraform-providers/terraform-provider-local`
 }
 
 func (c *command) Synopsis() string {
@@ -64,21 +70,23 @@ func (c *command) Run(args []string) int {
 
 	var providerRepoName string
 	var providerPath string
-	if len(args) > 0 {
+	if flags.NArg() == 1 {
 		var err error
-		providerRepoName = args[len(args)-1]
+		providerRepoName = flags.Args()[0]
 		providerPath, err = util.GetProviderPath(providerRepoName)
 		if err != nil {
 			log.Printf("Error finding provider %s: %s", providerRepoName, err)
 			return 1
 		}
-	} else {
+	} else if flags.NArg() == 0 {
 		var err error
 		providerPath, err = os.Getwd()
 		if err != nil {
 			log.Printf("Error finding current working directory: %s", err)
 			return 1
 		}
+	} else {
+		return cli.RunResultHelp
 	}
 
 	ui := &cli.ColoredUi{

@@ -30,16 +30,22 @@ func CommandFactory() (cli.Command, error) {
 }
 
 func (c *command) Help() string {
-	return `Usage: tf-sdk-migrator check [--help] [--csv] PATH
+	return `Usage: tf-sdk-migrator check [--help] [--csv] [PATH]
 
   Checks whether the Terraform provider at PATH is ready to be migrated to the
   new Terraform provider SDK (v1).
+
+  PATH is resolved relative to $GOPATH/src/. If PATH is not supplied, it is assumed
+  that the current working directory contains a Terraform provider.
 
   By default, outputs a human-readable report and exits 0 if the provider is
   ready for migration, 1 otherwise.
 
 Options:
-  ---csv    Output results in CSV format.
+  --csv    Output results in CSV format.
+
+Example:
+  tf-sdk-migrator check github.com/terraform-providers/terraform-provider-local
 `
 }
 
@@ -54,21 +60,23 @@ func (c *command) Run(args []string) int {
 	flags.Parse(args)
 
 	var providerPath string
-	if len(args) > 0 {
+	if flags.NArg() == 1 {
 		var err error
-		providerRepoName := args[len(args)-1]
+		providerRepoName := flags.Args()[0]
 		providerPath, err = util.GetProviderPath(providerRepoName)
 		if err != nil {
 			log.Printf("Error finding provider %s: %s", providerRepoName, err)
 			return 1
 		}
-	} else {
+	} else if flags.NArg() == 0 {
 		var err error
 		providerPath, err = os.Getwd()
 		if err != nil {
 			log.Printf("Error finding current working directory: %s", err)
 			return 1
 		}
+	} else {
+		return cli.RunResultHelp
 	}
 
 	ui := &cli.ColoredUi{
