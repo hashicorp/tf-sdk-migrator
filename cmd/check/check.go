@@ -145,8 +145,11 @@ func (c *command) Run(args []string) int {
 		}
 		if doesNotUseRemovedPackagesOrIdents {
 			ui.Info("No imports of deprecated SDK packages or identifiers: OK.")
-		} else {
+		}
+		if len(removedPackagesInUse) > 0 {
 			ui.Warn(fmt.Sprintf("Deprecated SDK packages in use: %+v", removedPackagesInUse))
+		}
+		if len(removedIdentsInUse) > 0 {
 			ui.Warn(fmt.Sprintf("Deprecated SDK identifiers in use: %+v", removedIdentsInUse))
 		}
 	}
