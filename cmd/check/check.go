@@ -94,9 +94,9 @@ func (c *command) Run(args []string) int {
 	if !csv {
 		ui.Output("Checking Go runtime version ...")
 	}
-	goVersion, goVersionSatisfiesConstraint := CheckGoVersion(providerPath)
+	goVersion, goVersionSatisfied := CheckGoVersion(providerPath)
 	if !csv {
-		if goVersionSatisfiesConstraint {
+		if goVersionSatisfied {
 			ui.Info(fmt.Sprintf("Go version %s: OK.", goVersion))
 		} else {
 			ui.Warn(fmt.Sprintf("Go version does not satisfy constraint %s. Found Go version: %s.", goVersionConstraint, goVersion))
@@ -106,9 +106,9 @@ func (c *command) Run(args []string) int {
 	if !csv {
 		ui.Output("Checking whether provider uses Go modules...")
 	}
-	providerUsesGoModules := CheckForGoModules(providerPath)
+	goModulesUsed := CheckForGoModules(providerPath)
 	if !csv {
-		if providerUsesGoModules {
+		if goModulesUsed {
 			ui.Info("Go modules in use: OK.")
 		} else {
 			ui.Warn("Go modules not in use. Provider must use Go modules.")
@@ -118,9 +118,9 @@ func (c *command) Run(args []string) int {
 	if !csv {
 		ui.Output("Checking version of github.com/hashicorp/terraform SDK used in provider...")
 	}
-	sdkVersion, sdkVersionSatisfiesConstraint, err := CheckProviderSDKVersion(providerPath)
+	sdkVersion, sdkVersionSatisfied, err := CheckProviderSDKVersion(providerPath)
 	if !csv {
-		if sdkVersionSatisfiesConstraint {
+		if sdkVersionSatisfied {
 			ui.Info(fmt.Sprintf("SDK version %s: OK.", sdkVersion))
 		} else if sdkVersion != "" {
 			ui.Warn(fmt.Sprintf("SDK version does not satisfy constraint %s. Found SDK version: %s", sdkVersionConstraint, sdkVersion))
@@ -137,42 +137,71 @@ func (c *command) Run(args []string) int {
 	if !csv {
 		ui.Output("Checking whether provider uses deprecated SDK packages or identifiers...")
 	}
-	removedPackagesInUse, removedIdentsInUse, doesNotUseRemovedPackagesOrIdents, err := CheckSDKPackageImportsAndRefs(providerPath)
+	removedPackagesInUse, removedIdentsInUse, err := CheckSDKPackageImportsAndRefs(providerPath)
+	if err != nil {
+		ui.Error(err.Error())
+		return 1
+	}
+	usesRemovedPackagesOrIdents := len(removedPackagesInUse) > 0 || len(removedIdentsInUse) > 0
 	if !csv {
 		if err != nil {
 			log.Printf("[WARN] Error determining use of deprecated SDK packages and identifiers: %s", err)
 			return 1
 		}
-		if doesNotUseRemovedPackagesOrIdents {
+		if !usesRemovedPackagesOrIdents {
 			ui.Info("No imports of deprecated SDK packages or identifiers: OK.")
 		}
-		if len(removedPackagesInUse) > 0 {
-			ui.Warn(fmt.Sprintf("Deprecated SDK packages in use: %+v", removedPackagesInUse))
-		}
-		if len(removedIdentsInUse) > 0 {
-			ui.Warn(fmt.Sprintf("Deprecated SDK identifiers in use: %+v", removedIdentsInUse))
-		}
+		formatRemovedPackages(ui, removedPackagesInUse)
+		formatRemovedIdents(ui, removedIdentsInUse)
 	}
-	allConstraintsSatisfied := goVersionSatisfiesConstraint && providerUsesGoModules && sdkVersionSatisfiesConstraint && doesNotUseRemovedPackagesOrIdents
+	constraintsSatisfied := goVersionSatisfied && goModulesUsed && sdkVersionSatisfied && !usesRemovedPackagesOrIdents
 	if csv {
-		ui.Output(fmt.Sprintf("go_version,go_version_satisfies_constraint,uses_go_modules,sdk_version,sdk_version_satisfies_constraint,does_not_use_removed_packages,all_constraints_satisfied\n%s,%t,%t,%s,%t,%t,%t", goVersion, goVersionSatisfiesConstraint, providerUsesGoModules, sdkVersion, sdkVersionSatisfiesConstraint, doesNotUseRemovedPackagesOrIdents, allConstraintsSatisfied))
+		ui.Output(fmt.Sprintf("go_version,go_version_satisfies_constraint,uses_go_modules,sdk_version,sdk_version_satisfies_constraint,does_not_use_removed_packages,all_constraints_satisfied\n%s,%t,%t,%s,%t,%t,%t",
+			goVersion, goVersionSatisfied, goModulesUsed, sdkVersion, sdkVersionSatisfied, !usesRemovedPackagesOrIdents, constraintsSatisfied))
 	} else {
 		var prettyProviderName string
 		if providerRepoName != "" {
 			prettyProviderName = " " + providerRepoName
 		}
-		if allConstraintsSatisfied {
+		if constraintsSatisfied {
 			ui.Info(fmt.Sprintf("\nAll constraints satisfied. Provider%s can be migrated to the new SDK.\n", prettyProviderName))
 			return 0
-		} else if providerUsesGoModules && sdkVersionSatisfiesConstraint && doesNotUseRemovedPackagesOrIdents {
+		} else if goModulesUsed && sdkVersionSatisfied && !usesRemovedPackagesOrIdents {
 			ui.Info(fmt.Sprintf("\nProvider%s can be migrated to the new SDK, but Go version %s is recommended.\n", prettyProviderName, goVersionConstraint))
 			return 0
 		}
 
 		ui.Warn("\nSome constraints not satisfied. Please resolve these before migrating to the new SDK.")
+
 	}
 
 	return 1
+}
+
+func formatRemovedPackages(ui cli.Ui, removedPackagesInUse []string) {
+	if len(removedPackagesInUse) == 0 {
+		return
+	}
+
+	ui.Warn("Deprecated SDK packages in use:")
+	for _, pkg := range removedPackagesInUse {
+		ui.Warn(fmt.Sprintf(" * %s", pkg))
+	}
+}
+
+func formatRemovedIdents(ui cli.Ui, removedIdentsInUse []*Offence) {
+	if len(removedIdentsInUse) == 0 {
+		return
+	}
+	ui.Warn("Deprecated SDK identifiers in use:")
+	for _, ident := range removedIdentsInUse {
+		d := ident.IdentDeprecation
+		ui.Warn(fmt.Sprintf(" * %s (%s)", d.Identifier.Name, d.ImportPath))
+
+		for _, pos := range ident.Positions {
+			ui.Warn(fmt.Sprintf("   * %s", pos))
+		}
+	}
 }
 
 func CheckGoVersion(providerPath string) (goVersion string, satisfiesConstraint bool) {
@@ -209,24 +238,23 @@ func CheckProviderSDKVersion(providerPath string) (sdkVersion string, satisfiesC
 	return v.String(), c.Check(v), nil
 }
 
-func CheckSDKPackageImportsAndRefs(providerPath string) (removedPackagesInUse []string, removedIdentsInUse []string, doesNotUseRemovedPackagesOrIdents bool, e error) {
-	providerImportDetails, err := GoListPackageImports(providerPath)
+func CheckSDKPackageImportsAndRefs(providerPath string) (removedPackagesInUse []string, packageRefsOffences []*Offence, err error) {
+	var providerImportDetails *ProviderImportDetails
+
+	providerImportDetails, err = GoListPackageImports(providerPath)
 	if err != nil {
-		return nil, nil, false, err
+		return nil, nil, err
 	}
 
 	removedPackagesInUse, err = CheckSDKPackageImports(providerImportDetails)
 	if err != nil {
-		return nil, nil, false, err
+		return nil, nil, err
 	}
 
-	packageRefsOffences, err := CheckSDKPackageRefs(providerImportDetails)
+	packageRefsOffences, err = CheckSDKPackageRefs(providerImportDetails)
 	if err != nil {
-		return nil, nil, false, err
-	}
-	for _, o := range packageRefsOffences {
-		removedIdentsInUse = append(removedIdentsInUse, fmt.Sprintf("Ident %v from package %v is used at %+v", o.IdentDeprecation.Identifier.Name, o.IdentDeprecation.ImportPath, o.Positions))
+		return nil, nil, err
 	}
 
-	return removedPackagesInUse, removedIdentsInUse, len(removedPackagesInUse) == 0 && len(packageRefsOffences) == 0, nil
+	return
 }
