@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"go/parser"
@@ -10,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -144,12 +146,46 @@ func (c *command) Run(args []string) int {
 		return 1
 	}
 
+	ui.Output("Running `go mod tidy`...")
+	err = GoModTidy(providerPath)
+	if err != nil {
+		ui.Error(fmt.Sprintf("Error running go mod tidy: %s", err))
+		return 1
+	}
+
 	var prettyProviderName string
 	if providerRepoName != "" {
 		prettyProviderName = " " + providerRepoName
 	}
-	ui.Info(fmt.Sprintf("Success! Provider%s is migrated to %s %s.", prettyProviderName, newSDKPackagePath, sdkVersion))
+	ui.Info(fmt.Sprintf("Success! Provider%s is migrated to %s %s.",
+		prettyProviderName, newSDKPackagePath, sdkVersion))
+
+	hasVendor, err := HasVendorFolder(providerPath)
+	if err != nil {
+		ui.Error(fmt.Sprintf("Failed to check vendor folder: %s", err))
+		return 1
+	}
+
+	if hasVendor {
+		ui.Info("\nIt looks like this provider vendors dependencies. " +
+			"Don't forget to run `go mod vendor`.")
+	}
+
+	ui.Info(fmt.Sprintf("Make sure to review all changes and run all tests."))
 	return 0
+}
+
+func HasVendorFolder(providerPath string) (bool, error) {
+	vendorPath := filepath.Join(providerPath, "vendor")
+	fs, err := os.Stat(vendorPath)
+	if err != nil {
+		return false, err
+	}
+	if !fs.Mode().IsDir() {
+		return false, fmt.Errorf("%s is not folder (expected folder)", vendorPath)
+	}
+
+	return true, nil
 }
 
 func RewriteGoMod(providerPath string, sdkVersion string) error {
@@ -181,6 +217,25 @@ func RewriteGoMod(providerPath string, sdkVersion string) error {
 	err = ioutil.WriteFile(goModPath, formattedOutput, 0644)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func GoModTidy(providerPath string) error {
+	args := []string{"go", "mod", "tidy"}
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Env = os.Environ()
+	cmd.Dir = providerPath
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	log.Printf("[DEBUG] Executing command %q", args)
+	err := cmd.Run()
+	if err != nil {
+		return NewExecError(err, stderr.String())
 	}
 
 	return nil
@@ -220,4 +275,17 @@ func RewriteImportedPackageImports(filePath string, stringToReplace string, repl
 	}
 
 	return nil
+}
+
+type ExecError struct {
+	Err    error
+	Stderr string
+}
+
+func (ee *ExecError) Error() string {
+	return fmt.Sprintf("%s\n%s", ee.Err, ee.Stderr)
+}
+
+func NewExecError(err error, stderr string) *ExecError {
+	return &ExecError{err, stderr}
 }
