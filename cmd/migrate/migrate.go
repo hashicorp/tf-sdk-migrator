@@ -81,14 +81,14 @@ func (c *command) Run(args []string) int {
 		providerRepoName = flags.Args()[0]
 		providerPath, err = util.GetProviderPath(providerRepoName)
 		if err != nil {
-			log.Printf("Error finding provider %s: %s", providerRepoName, err)
+			c.ui.Error(fmt.Sprintf("Error finding provider %s: %s", providerRepoName, err))
 			return 1
 		}
 	} else if flags.NArg() == 0 {
 		var err error
 		providerPath, err = os.Getwd()
 		if err != nil {
-			log.Printf("Error finding current working directory: %s", err)
+			c.ui.Error(fmt.Sprintf("Error finding current working directory: %s", err))
 			return 1
 		}
 	} else {

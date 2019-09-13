@@ -70,14 +70,14 @@ func (c *command) Run(args []string) int {
 		providerRepoName := flags.Args()[0]
 		providerPath, err = util.GetProviderPath(providerRepoName)
 		if err != nil {
-			log.Printf("Error finding provider %s: %s", providerRepoName, err)
+			c.ui.Error(fmt.Sprintf("Error finding provider %s: %s", providerRepoName, err))
 			return 1
 		}
 	} else if flags.NArg() == 0 {
 		var err error
 		providerPath, err = os.Getwd()
 		if err != nil {
-			log.Printf("Error finding current working directory: %s", err)
+			c.ui.Error(fmt.Sprintf("Error finding current working directory: %s", err))
 			return 1
 		}
 	} else {
@@ -123,7 +123,7 @@ func (c *command) Run(args []string) int {
 		}
 	}
 	if err != nil {
-		log.Printf("[WARN] Error getting SDK version for provider %s: %s", providerPath, err)
+		c.ui.Error(fmt.Sprintf("[WARN] Error getting SDK version for provider %s: %s", providerPath, err))
 		return 1
 	}
 
@@ -138,7 +138,7 @@ func (c *command) Run(args []string) int {
 	usesRemovedPackagesOrIdents := len(removedPackagesInUse) > 0 || len(removedIdentsInUse) > 0
 	if !csv {
 		if err != nil {
-			log.Printf("[WARN] Error determining use of deprecated SDK packages and identifiers: %s", err)
+			c.ui.Error(fmt.Sprintf("[WARN] Error determining use of deprecated SDK packages and identifiers: %s", err))
 			return 1
 		}
 		if !usesRemovedPackagesOrIdents {
@@ -203,7 +203,7 @@ func CheckGoVersion(providerPath string) (goVersion string, satisfiesConstraint 
 	runtimeVersion := strings.TrimLeft(runtime.Version(), "go")
 	v, err := version.NewVersion(runtimeVersion)
 	if err != nil {
-		log.Printf("[ERROR] Could not parse Go version %s", runtimeVersion)
+		log.Printf("[WARN] Could not parse Go version %s", runtimeVersion)
 		return "", false
 	}
 
