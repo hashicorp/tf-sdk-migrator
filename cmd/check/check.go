@@ -19,7 +19,7 @@ import (
 const (
 	CommandName             = "check"
 	goVersionConstraint     = ">=1.12"
-	sdkVersionConstraint    = ">=0.12.6"
+	sdkVersionConstraint    = ">=0.12.7"
 	terraformDependencyPath = "github.com/hashicorp/terraform"
 )
 
