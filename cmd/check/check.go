@@ -30,13 +30,13 @@ func CommandFactory() (cli.Command, error) {
 }
 
 func (c *command) Help() string {
-	return `Usage: tf-sdk-migrator check [--help] [--csv] [PATH]
+	return `Usage: tf-sdk-migrator check [--help] [--csv] [IMPORT_PATH]
 
   Checks whether the Terraform provider at PATH is ready to be migrated to the
   new Terraform provider SDK (v1).
 
-  PATH is resolved relative to $GOPATH/src/. If PATH is not supplied, it is assumed
-  that the current working directory contains a Terraform provider.
+  IMPORT_PATH is resolved relative to $GOPATH/src/IMPORT_PATH. If it is not supplied,
+  it is assumed that the current working directory contains a Terraform provider.
 
   By default, outputs a human-readable report and exits 0 if the provider is
   ready for migration, 1 otherwise.

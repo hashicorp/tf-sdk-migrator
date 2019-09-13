@@ -42,13 +42,13 @@ func CommandFactory() (cli.Command, error) {
 }
 
 func (c *command) Help() string {
-	return `Usage: tf-sdk-migrator migrate [--help] [--sdk-version SDK_VERSION] [PATH]
+	return `Usage: tf-sdk-migrator migrate [--help] [--sdk-version SDK_VERSION] [IMPORT_PATH]
 
   Migrates the Terraform provider at PATH to the new Terraform provider
   SDK, defaulting to version ` + defaultSDKVersion + `.
 
-  PATH is resolved relative to $GOPATH/src/. If PATH is not supplied, it is assumed
-  that the current working directory contains a Terraform provider.
+  IMPORT_PATH is resolved relative to $GOPATH/src/IMPORT_PATH. If it is not supplied,
+  it is assumed that the current working directory contains a Terraform provider.
 
   Optionally, an SDK_VERSION can be passed, which is parsed as a Go module
   release version. For example: v1.0.1, latest, master.
