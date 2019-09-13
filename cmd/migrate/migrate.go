@@ -35,10 +35,14 @@ var printConfig = printer.Config{
 	Tabwidth: 8,
 }
 
-type command struct{}
+type command struct {
+	ui cli.Ui
+}
 
-func CommandFactory() (cli.Command, error) {
-	return &command{}, nil
+func CommandFactory(ui cli.Ui) func() (cli.Command, error) {
+	return func() (cli.Command, error) {
+		return &command{ui}, nil
+	}
 }
 
 func (c *command) Help() string {
@@ -91,21 +95,9 @@ func (c *command) Run(args []string) int {
 		return cli.RunResultHelp
 	}
 
-	ui := &cli.ColoredUi{
-		OutputColor: cli.UiColorBlue,
-		InfoColor:   cli.UiColorGreen,
-		ErrorColor:  cli.UiColorRed,
-		WarnColor:   cli.UiColorYellow,
-		Ui: &cli.BasicUi{
-			Reader:      os.Stdin,
-			Writer:      os.Stdout,
-			ErrorWriter: os.Stderr,
-		},
-	}
-
-	checkCmd, err := check.CommandFactory()
+	checkCmd, err := check.CommandFactory(c.ui)()
 	if err != nil {
-		ui.Error(fmt.Sprintf("Error running eligibility check: %s", err))
+		c.ui.Error(fmt.Sprintf("Error running eligibility check: %s", err))
 	}
 
 	var checkArgs []string
@@ -114,18 +106,18 @@ func (c *command) Run(args []string) int {
 	}
 	returnCode := checkCmd.Run(checkArgs)
 	if returnCode != 0 {
-		ui.Warn("Provider failed eligibility check for migration to the new SDK. Please see warnings above.")
+		c.ui.Warn("Provider failed eligibility check for migration to the new SDK. Please see warnings above.")
 		return 1
 	}
 
-	ui.Output("Rewriting provider go.mod file...")
+	c.ui.Output("Rewriting provider go.mod file...")
 	err = RewriteGoMod(providerPath, sdkVersion)
 	if err != nil {
-		ui.Error(fmt.Sprintf("Error rewriting go.mod file: %s", err))
+		c.ui.Error(fmt.Sprintf("Error rewriting go.mod file: %s", err))
 		return 1
 	}
 
-	ui.Output("Rewriting SDK package imports...")
+	c.ui.Output("Rewriting SDK package imports...")
 	err = filepath.Walk(providerPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -142,14 +134,14 @@ func (c *command) Run(args []string) int {
 		return nil
 	})
 	if err != nil {
-		ui.Error(fmt.Sprintf("Error rewriting SDK imports: %s", err))
+		c.ui.Error(fmt.Sprintf("Error rewriting SDK imports: %s", err))
 		return 1
 	}
 
-	ui.Output("Running `go mod tidy`...")
+	c.ui.Output("Running `go mod tidy`...")
 	err = GoModTidy(providerPath)
 	if err != nil {
-		ui.Error(fmt.Sprintf("Error running go mod tidy: %s", err))
+		c.ui.Error(fmt.Sprintf("Error running go mod tidy: %s", err))
 		return 1
 	}
 
@@ -157,21 +149,21 @@ func (c *command) Run(args []string) int {
 	if providerRepoName != "" {
 		prettyProviderName = " " + providerRepoName
 	}
-	ui.Info(fmt.Sprintf("Success! Provider%s is migrated to %s %s.",
+	c.ui.Info(fmt.Sprintf("Success! Provider%s is migrated to %s %s.",
 		prettyProviderName, newSDKPackagePath, sdkVersion))
 
 	hasVendor, err := HasVendorFolder(providerPath)
 	if err != nil {
-		ui.Error(fmt.Sprintf("Failed to check vendor folder: %s", err))
+		c.ui.Error(fmt.Sprintf("Failed to check vendor folder: %s", err))
 		return 1
 	}
 
 	if hasVendor {
-		ui.Info("\nIt looks like this provider vendors dependencies. " +
+		c.ui.Info("\nIt looks like this provider vendors dependencies. " +
 			"Don't forget to run `go mod vendor`.")
 	}
 
-	ui.Info(fmt.Sprintf("Make sure to review all changes and run all tests."))
+	c.ui.Info(fmt.Sprintf("Make sure to review all changes and run all tests."))
 	return 0
 }
 

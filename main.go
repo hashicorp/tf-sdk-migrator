@@ -18,11 +18,23 @@ func main() {
 	}
 	log.SetOutput(filter)
 
+	ui := &cli.ColoredUi{
+		OutputColor: cli.UiColorBlue,
+		InfoColor:   cli.UiColorGreen,
+		ErrorColor:  cli.UiColorRed,
+		WarnColor:   cli.UiColorYellow,
+		Ui: &cli.BasicUi{
+			Reader:      os.Stdin,
+			Writer:      os.Stdout,
+			ErrorWriter: os.Stderr,
+		},
+	}
+
 	c := cli.NewCLI("tf-sdk-migrator", "0.1.0")
 	c.Args = os.Args[1:]
 	c.Commands = map[string]cli.CommandFactory{
-		check.CommandName:   check.CommandFactory,
-		migrate.CommandName: migrate.CommandFactory,
+		check.CommandName:   check.CommandFactory(ui),
+		migrate.CommandName: migrate.CommandFactory(ui),
 	}
 
 	exitStatus, err := c.Run()
