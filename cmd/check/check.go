@@ -23,20 +23,24 @@ const (
 	terraformDependencyPath = "github.com/hashicorp/terraform"
 )
 
-type command struct{}
+type command struct {
+	ui cli.Ui
+}
 
-func CommandFactory() (cli.Command, error) {
-	return &command{}, nil
+func CommandFactory(ui cli.Ui) func() (cli.Command, error) {
+	return func() (cli.Command, error) {
+		return &command{ui}, nil
+	}
 }
 
 func (c *command) Help() string {
-	return `Usage: tf-sdk-migrator check [--help] [--csv] [PATH]
+	return `Usage: tf-sdk-migrator check [--help] [--csv] [IMPORT_PATH]
 
   Checks whether the Terraform provider at PATH is ready to be migrated to the
   new Terraform provider SDK (v1).
 
-  PATH is resolved relative to $GOPATH/src/. If PATH is not supplied, it is assumed
-  that the current working directory contains a Terraform provider.
+  IMPORT_PATH is resolved relative to $GOPATH/src/IMPORT_PATH. If it is not supplied,
+  it is assumed that the current working directory contains a Terraform provider.
 
   By default, outputs a human-readable report and exits 0 if the provider is
   ready for migration, 1 otherwise.
@@ -66,97 +70,86 @@ func (c *command) Run(args []string) int {
 		providerRepoName := flags.Args()[0]
 		providerPath, err = util.GetProviderPath(providerRepoName)
 		if err != nil {
-			log.Printf("Error finding provider %s: %s", providerRepoName, err)
+			c.ui.Error(fmt.Sprintf("Error finding provider %s: %s", providerRepoName, err))
 			return 1
 		}
 	} else if flags.NArg() == 0 {
 		var err error
 		providerPath, err = os.Getwd()
 		if err != nil {
-			log.Printf("Error finding current working directory: %s", err)
+			c.ui.Error(fmt.Sprintf("Error finding current working directory: %s", err))
 			return 1
 		}
 	} else {
 		return cli.RunResultHelp
 	}
 
-	ui := &cli.ColoredUi{
-		OutputColor: cli.UiColorBlue,
-		InfoColor:   cli.UiColorGreen,
-		ErrorColor:  cli.UiColorRed,
-		WarnColor:   cli.UiColorYellow,
-		Ui: &cli.BasicUi{
-			Reader:      os.Stdin,
-			Writer:      os.Stdout,
-			ErrorWriter: os.Stderr,
-		},
-	}
 	if !csv {
-		ui.Output("Checking Go runtime version ...")
+		c.ui.Output("Checking Go runtime version ...")
 	}
 	goVersion, goVersionSatisfied := CheckGoVersion(providerPath)
 	if !csv {
 		if goVersionSatisfied {
-			ui.Info(fmt.Sprintf("Go version %s: OK.", goVersion))
+			c.ui.Info(fmt.Sprintf("Go version %s: OK.", goVersion))
 		} else {
-			ui.Warn(fmt.Sprintf("Go version does not satisfy constraint %s. Found Go version: %s.", goVersionConstraint, goVersion))
+			c.ui.Warn(fmt.Sprintf("Go version does not satisfy constraint %s. Found Go version: %s.", goVersionConstraint, goVersion))
 		}
 	}
 
 	if !csv {
-		ui.Output("Checking whether provider uses Go modules...")
+		c.ui.Output("Checking whether provider uses Go modules...")
 	}
 	goModulesUsed := CheckForGoModules(providerPath)
 	if !csv {
 		if goModulesUsed {
-			ui.Info("Go modules in use: OK.")
+			c.ui.Info("Go modules in use: OK.")
 		} else {
-			ui.Warn("Go modules not in use. Provider must use Go modules.")
+			c.ui.Warn("Go modules not in use. Provider must use Go modules.")
 		}
 	}
 
 	if !csv {
-		ui.Output("Checking version of github.com/hashicorp/terraform SDK used in provider...")
+		c.ui.Output("Checking version of github.com/hashicorp/terraform SDK used in provider...")
 	}
 	sdkVersion, sdkVersionSatisfied, err := CheckProviderSDKVersion(providerPath)
 	if !csv {
 		if sdkVersionSatisfied {
-			ui.Info(fmt.Sprintf("SDK version %s: OK.", sdkVersion))
+			c.ui.Info(fmt.Sprintf("SDK version %s: OK.", sdkVersion))
 		} else if sdkVersion != "" {
-			ui.Warn(fmt.Sprintf("SDK version does not satisfy constraint %s. Found SDK version: %s", sdkVersionConstraint, sdkVersion))
+			c.ui.Warn(fmt.Sprintf("SDK version does not satisfy constraint %s. Found SDK version: %s", sdkVersionConstraint, sdkVersion))
 		} else {
 
-			ui.Warn(fmt.Sprintf("SDK version could not be determined. Provider must use hashicorp/terraform SDK."))
+			c.ui.Warn(fmt.Sprintf("SDK version could not be determined. Provider must use hashicorp/terraform SDK."))
 		}
 	}
 	if err != nil {
-		log.Printf("[WARN] Error getting SDK version for provider %s: %s", providerPath, err)
+		c.ui.Error(fmt.Sprintf("[WARN] Error getting SDK version for provider %s: %s", providerPath, err))
 		return 1
 	}
 
 	if !csv {
-		ui.Output("Checking whether provider uses deprecated SDK packages or identifiers...")
+		c.ui.Output("Checking whether provider uses deprecated SDK packages or identifiers...")
 	}
 	removedPackagesInUse, removedIdentsInUse, err := CheckSDKPackageImportsAndRefs(providerPath)
 	if err != nil {
-		ui.Error(err.Error())
+		c.ui.Error(err.Error())
 		return 1
 	}
 	usesRemovedPackagesOrIdents := len(removedPackagesInUse) > 0 || len(removedIdentsInUse) > 0
 	if !csv {
 		if err != nil {
-			log.Printf("[WARN] Error determining use of deprecated SDK packages and identifiers: %s", err)
+			c.ui.Error(fmt.Sprintf("[WARN] Error determining use of deprecated SDK packages and identifiers: %s", err))
 			return 1
 		}
 		if !usesRemovedPackagesOrIdents {
-			ui.Info("No imports of deprecated SDK packages or identifiers: OK.")
+			c.ui.Info("No imports of deprecated SDK packages or identifiers: OK.")
 		}
-		formatRemovedPackages(ui, removedPackagesInUse)
-		formatRemovedIdents(ui, removedIdentsInUse)
+		formatRemovedPackages(c.ui, removedPackagesInUse)
+		formatRemovedIdents(c.ui, removedIdentsInUse)
 	}
 	constraintsSatisfied := goVersionSatisfied && goModulesUsed && sdkVersionSatisfied && !usesRemovedPackagesOrIdents
 	if csv {
-		ui.Output(fmt.Sprintf("go_version,go_version_satisfies_constraint,uses_go_modules,sdk_version,sdk_version_satisfies_constraint,does_not_use_removed_packages,all_constraints_satisfied\n%s,%t,%t,%s,%t,%t,%t",
+		c.ui.Output(fmt.Sprintf("go_version,go_version_satisfies_constraint,uses_go_modules,sdk_version,sdk_version_satisfies_constraint,does_not_use_removed_packages,all_constraints_satisfied\n%s,%t,%t,%s,%t,%t,%t",
 			goVersion, goVersionSatisfied, goModulesUsed, sdkVersion, sdkVersionSatisfied, !usesRemovedPackagesOrIdents, constraintsSatisfied))
 	} else {
 		var prettyProviderName string
@@ -164,14 +157,14 @@ func (c *command) Run(args []string) int {
 			prettyProviderName = " " + providerRepoName
 		}
 		if constraintsSatisfied {
-			ui.Info(fmt.Sprintf("\nAll constraints satisfied. Provider%s can be migrated to the new SDK.\n", prettyProviderName))
+			c.ui.Info(fmt.Sprintf("\nAll constraints satisfied. Provider%s can be migrated to the new SDK.\n", prettyProviderName))
 			return 0
 		} else if goModulesUsed && sdkVersionSatisfied && !usesRemovedPackagesOrIdents {
-			ui.Info(fmt.Sprintf("\nProvider%s can be migrated to the new SDK, but Go version %s is recommended.\n", prettyProviderName, goVersionConstraint))
+			c.ui.Info(fmt.Sprintf("\nProvider%s can be migrated to the new SDK, but Go version %s is recommended.\n", prettyProviderName, goVersionConstraint))
 			return 0
 		}
 
-		ui.Warn("\nSome constraints not satisfied. Please resolve these before migrating to the new SDK.")
+		c.ui.Warn("\nSome constraints not satisfied. Please resolve these before migrating to the new SDK.")
 
 	}
 
@@ -210,7 +203,7 @@ func CheckGoVersion(providerPath string) (goVersion string, satisfiesConstraint 
 	runtimeVersion := strings.TrimLeft(runtime.Version(), "go")
 	v, err := version.NewVersion(runtimeVersion)
 	if err != nil {
-		log.Printf("[ERROR] Could not parse Go version %s", runtimeVersion)
+		log.Printf("[WARN] Could not parse Go version %s", runtimeVersion)
 		return "", false
 	}
 
