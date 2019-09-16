@@ -21,7 +21,18 @@ const (
 
 	tfModPath           = "github.com/hashicorp/terraform"
 	tfVersionConstraint = ">=0.12.7"
+
+	sdkModPath           = "github.com/hashicorp/terraform-plugin-sdk"
+	sdkVersionConstraint = ">=0.0.1"
 )
+
+type AlreadyMigrated struct {
+	sdkVersion string
+}
+
+func (am *AlreadyMigrated) Error() string {
+	return fmt.Sprintf("Provider already migrated to SDK version %s", am.sdkVersion)
+}
 
 type command struct {
 	ui cli.Ui
@@ -86,6 +97,12 @@ func (c *command) Run(args []string) int {
 
 	err := runCheck(c.ui, providerPath, providerRepoName, csv)
 	if err != nil {
+		msg, alreadyMigrated := err.(*AlreadyMigrated)
+		if alreadyMigrated {
+			c.ui.Info(msg.Error())
+			return 0
+		}
+
 		if !csv {
 			c.ui.Error(err.Error())
 		}
@@ -121,6 +138,22 @@ func runCheck(ui cli.Ui, providerPath, repoName string, csv bool) error {
 			ui.Info("Go modules in use: OK.")
 		} else {
 			ui.Warn("Go modules not in use. Provider must use Go modules.")
+		}
+	}
+
+	if !csv {
+		ui.Output(fmt.Sprintf("Checking version of %s to determine if provider was already migrated...", sdkModPath))
+	}
+	sdkVersion, sdkVersionSatisfied, err := CheckDependencyVersion(providerPath, sdkModPath, sdkVersionConstraint)
+	if err != nil {
+		return fmt.Errorf("Error getting SDK version for provider %s: %s", providerPath, err)
+	}
+	if !csv {
+		if sdkVersionSatisfied {
+			return &AlreadyMigrated{sdkVersion}
+		} else if sdkVersion != "" {
+			return fmt.Errorf("Provider already migrated, but SDK version %s does not satisfy constraint %s.",
+				sdkVersion, sdkVersionConstraint)
 		}
 	}
 
