@@ -42,9 +42,9 @@ The Go version requirement is a "soft" requirement: it is strongly recommended t
 
 ### Migrate to SDK module: `tf-sdk-migrator migrate`
 
-Migrates the Terraform provider to the new extracted SDK (`github.com/hashicorp/terraform-plugin-sdk`), replacing references to the old SDK (`github.com/hashicorp/terraform`**.
+Migrates the Terraform provider to the new extracted SDK (`github.com/hashicorp/terraform-plugin-sdk`), replacing references to the old SDK (`github.com/hashicorp/terraform`).
 
-No backup is made before modifying files.
+**Note: No backup is made before modifying files. Please make sure your VCS staging area is clean.**
 
 ```sh
 tf-sdk-migrator migrate [--help] PATH
@@ -55,6 +55,9 @@ The eligibility check will be run first: migration will not proceed if this chec
 The migration tool will then make the following changes:
  - `go.mod`: replace `github.com/hashicorp/terraform` dependency with `github.com/hashicorp/terraform-plugin-sdk`
  - rewrite import paths in all provider `.go` files (except in `vendor/`) accordingly
+ - run `go mod tidy`
+
+If you use vendored Go dependencies, you should run `go mod vendor` afterwards.
 
 ---
 
