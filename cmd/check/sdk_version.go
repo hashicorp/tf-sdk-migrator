@@ -3,39 +3,57 @@ package check
 import (
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 
 	version "github.com/hashicorp/go-version"
 	"github.com/radeksimko/mod/modfile"
 	"github.com/radeksimko/mod/module"
 )
 
-func ReadSDKVersionFromGoModFile(providerPath string) (*version.Version, error) {
-	path := providerPath + "/go.mod"
-	content, err := ioutil.ReadFile(path)
+func CheckDependencyVersion(providerPath, modPath, constaint string) (string, bool, error) {
+	c, err := version.NewConstraint(constaint)
+
+	modVersion, err := ReadVersionFromModFile(providerPath, modPath)
 	if err != nil {
-		return nil, fmt.Errorf("could not read go.mod file for provider %s", providerPath)
+		return "", false, err
+	}
+	if modVersion == nil {
+		return "", false, nil
 	}
 
-	pf, err := modfile.Parse(path, content, nil)
+	return modVersion.String(), c.Check(modVersion), nil
+}
+
+func ReadVersionFromModFile(path, dependencyPath string) (*version.Version, error) {
+	fullPath := filepath.Join(path, "go.mod")
+	content, err := ioutil.ReadFile(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not read %s: %s", fullPath, err)
+	}
+
+	pf, err := modfile.Parse(fullPath, content, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	mv, err := findMatchingRequireStmt(pf.Require, terraformDependencyPath)
+	mv, err := findMatchingRequireStmt(pf.Require, dependencyPath)
 	if err != nil {
 		return nil, err
+	}
+	if mv == nil {
+		return nil, nil
 	}
 
 	return version.NewVersion(mv.Version)
 }
 
-func findMatchingRequireStmt(requires []*modfile.Require, path string) (module.Version, error) {
+func findMatchingRequireStmt(requires []*modfile.Require, modPath string) (*module.Version, error) {
 	for _, requireStmt := range requires {
 		mod := requireStmt.Mod
-		if mod.Path == path {
-			return mod, nil
+		if mod.Path == modPath {
+			return &mod, nil
 		}
 	}
 
-	return module.Version{}, fmt.Errorf("require statement with path %q not found", path)
+	return nil, nil
 }

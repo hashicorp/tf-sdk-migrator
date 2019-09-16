@@ -95,18 +95,10 @@ func (c *command) Run(args []string) int {
 		return cli.RunResultHelp
 	}
 
-	checkCmd, err := check.CommandFactory(c.ui)()
+	err := check.RunCheck(c.ui, providerPath, providerRepoName)
 	if err != nil {
-		c.ui.Error(fmt.Sprintf("Error running eligibility check: %s", err))
-	}
-
-	var checkArgs []string
-	if providerRepoName != "" {
-		checkArgs = []string{providerRepoName}
-	}
-	returnCode := checkCmd.Run(checkArgs)
-	if returnCode != 0 {
-		c.ui.Warn("Provider failed eligibility check for migration to the new SDK. Please see warnings above.")
+		c.ui.Warn(err.Error())
+		c.ui.Error("Provider failed eligibility check for migration to the new SDK. Please see messages above.")
 		return 1
 	}
 
