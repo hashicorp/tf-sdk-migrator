@@ -23,7 +23,7 @@ const (
 	tfVersionConstraint = ">=0.12.7"
 
 	sdkModPath           = "github.com/hashicorp/terraform-plugin-sdk"
-	sdkVersionConstraint = ">=0.0.1"
+	sdkVersionConstraint = ">=1.0.0"
 )
 
 type AlreadyMigrated struct {
