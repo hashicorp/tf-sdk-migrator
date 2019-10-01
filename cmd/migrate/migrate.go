@@ -46,7 +46,7 @@ func CommandFactory(ui cli.Ui) func() (cli.Command, error) {
 }
 
 func (c *command) Help() string {
-	return `Usage: tf-sdk-migrator migrate [--help] [--sdk-version SDK_VERSION] [IMPORT_PATH]
+	return `Usage: tf-sdk-migrator migrate [--help] [--sdk-version SDK_VERSION] [--force] [IMPORT_PATH]
 
   Migrates the Terraform provider at PATH to the new Terraform provider
   SDK, defaulting to version ` + defaultSDKVersion + `.
@@ -72,6 +72,8 @@ func (c *command) Run(args []string) int {
 	flags := flag.NewFlagSet(CommandName, flag.ExitOnError)
 	var sdkVersion string
 	flags.StringVar(&sdkVersion, "sdk-version", defaultSDKVersion, "SDK version")
+	var forceMigration bool
+	flags.BoolVar(&forceMigration, "force", false, "Whether to ignore failing checks and force migration")
 	flags.Parse(args)
 
 	var providerRepoName string
@@ -98,8 +100,12 @@ func (c *command) Run(args []string) int {
 	err := check.RunCheck(c.ui, providerPath, providerRepoName)
 	if err != nil {
 		c.ui.Warn(err.Error())
-		c.ui.Error("Provider failed eligibility check for migration to the new SDK. Please see messages above.")
-		return 1
+		if forceMigration {
+			c.ui.Warn("Ignoring failed eligibility checks")
+		} else {
+			c.ui.Error("Provider failed eligibility check for migration to the new SDK. Please see messages above.")
+			return 1
+		}
 	}
 
 	c.ui.Output("Rewriting provider go.mod file...")
