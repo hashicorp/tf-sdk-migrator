@@ -27,7 +27,7 @@ const (
 	oldSDKImportPath  = "github.com/hashicorp/terraform"
 	newSDKImportPath  = "github.com/hashicorp/terraform-plugin-sdk"
 	newSDKPackagePath = "github.com/hashicorp/terraform-plugin-sdk"
-	defaultSDKVersion = "v1.1.0"
+	defaultSDKVersion = "v1.7.0"
 )
 
 var printConfig = printer.Config{
