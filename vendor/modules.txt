@@ -22,15 +22,18 @@ github.com/mattn/go-isatty
 github.com/mitchellh/cli
 # github.com/posener/complete v1.1.1
 github.com/posener/complete
-github.com/posener/complete/cmd/install
 github.com/posener/complete/cmd
+github.com/posener/complete/cmd/install
 github.com/posener/complete/match
 # github.com/radeksimko/go-refs v0.0.0-20190823125319-880a3294a1a0
 github.com/radeksimko/go-refs/parser
-# github.com/radeksimko/mod v0.0.0-20190807092412-93f771451dae
-github.com/radeksimko/mod/modfile
-github.com/radeksimko/mod/module
-github.com/radeksimko/mod/lazyregexp
-github.com/radeksimko/mod/semver
+# golang.org/x/mod v0.2.0
+golang.org/x/mod/internal/lazyregexp
+golang.org/x/mod/modfile
+golang.org/x/mod/module
+golang.org/x/mod/semver
 # golang.org/x/sys v0.0.0-20190412213103-97732733099d
 golang.org/x/sys/unix
+# golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
+golang.org/x/xerrors
+golang.org/x/xerrors/internal
