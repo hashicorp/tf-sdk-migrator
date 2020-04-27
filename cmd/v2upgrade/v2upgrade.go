@@ -1,4 +1,4 @@
-package migrate
+package v2upgrade
 
 import (
 	"bufio"
@@ -14,18 +14,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/tf-sdk-migrator/cmd/check"
 	"github.com/hashicorp/tf-sdk-migrator/util"
 	"github.com/mitchellh/cli"
 	"github.com/radeksimko/mod/modfile"
 )
 
 const (
-	CommandName       = "migrate"
-	oldSDKImportPath  = "github.com/hashicorp/terraform"
-	newSDKImportPath  = "github.com/hashicorp/terraform-plugin-sdk"
-	newSDKPackagePath = "github.com/hashicorp/terraform-plugin-sdk"
-	defaultSDKVersion = "v1.7.0"
+	CommandName    = "v2upgrade"
+	oldImportPath  = "github.com/hashicorp/terraform-plugin-sdk"
+	newImportPath  = "github.com/hashicorp/terraform-plugin-sdk/v2"
+	newPackagePath = "github.com/hashicorp/terraform-plugin-sdk/v2"
+	defaultVersion = "master"
 )
 
 var printConfig = printer.Config{
@@ -44,34 +43,32 @@ func CommandFactory(ui cli.Ui) func() (cli.Command, error) {
 }
 
 func (c *command) Help() string {
-	return `Usage: tf-sdk-migrator migrate [--help] [--sdk-version SDK_VERSION] [--force] [IMPORT_PATH]
+	return `Usage: tf-sdk-migrator v2upgrade [--help] [--sdk-version SDK_VERSION] [IMPORT_PATH]
 
-  Migrates the Terraform provider at PATH to the new Terraform provider
-  SDK, defaulting to version ` + defaultSDKVersion + `.
+  Upgrades the Terraform provider to major version 2 of the Terraform
+  provider SDK, defaulting to version ` + defaultVersion + `.
+
+  Rewrites import paths and go.mod. No backup is made before files are
+  overwritten.
 
   IMPORT_PATH is resolved relative to $GOPATH/src/IMPORT_PATH. If it is not supplied,
   it is assumed that the current working directory contains a Terraform provider.
 
   Optionally, an SDK_VERSION can be passed, which is parsed as a Go module
-  release version. For example: v1.0.1, latest, master.
-
-  Rewrites import paths and go.mod. No backup is made before files are
-  overwritten.
+  release version. For example: v2.0.1, latest, master.
 
 Example:
-  tf-sdk-migrator migrate --sdk-version master github.com/terraform-providers/terraform-provider-local`
+  tf-sdk-migrator v2upgrade --sdk-version v2.0.0-rc.1 github.com/terraform-providers/terraform-provider-local`
 }
 
 func (c *command) Synopsis() string {
-	return "Migrates a Terraform provider to the new SDK (v1)."
+	return "Upgrades the Terraform provider SDK version to v2."
 }
 
 func (c *command) Run(args []string) int {
 	flags := flag.NewFlagSet(CommandName, flag.ExitOnError)
 	var sdkVersion string
-	flags.StringVar(&sdkVersion, "sdk-version", defaultSDKVersion, "SDK version")
-	var forceMigration bool
-	flags.BoolVar(&forceMigration, "force", false, "Whether to ignore failing checks and force migration")
+	flags.StringVar(&sdkVersion, "sdk-version", defaultVersion, "SDK version")
 	flags.Parse(args)
 
 	var providerRepoName string
@@ -95,19 +92,8 @@ func (c *command) Run(args []string) int {
 		return cli.RunResultHelp
 	}
 
-	err := check.RunCheck(c.ui, providerPath, providerRepoName)
-	if err != nil {
-		c.ui.Warn(err.Error())
-		if forceMigration {
-			c.ui.Warn("Ignoring failed eligibility checks")
-		} else {
-			c.ui.Error("Provider failed eligibility check for migration to the new SDK. Please see messages above.")
-			return 1
-		}
-	}
-
 	c.ui.Output("Rewriting provider go.mod file...")
-	err = RewriteGoMod(providerPath, sdkVersion)
+	err := RewriteGoMod(providerPath, sdkVersion)
 	if err != nil {
 		c.ui.Error(fmt.Sprintf("Error rewriting go.mod file: %s", err))
 		return 1
@@ -122,7 +108,7 @@ func (c *command) Run(args []string) int {
 			return filepath.SkipDir
 		}
 		if !info.IsDir() && strings.HasSuffix(info.Name(), ".go") {
-			err := RewriteImportedPackageImports(path, oldSDKImportPath, newSDKImportPath)
+			err := RewriteImportedPackageImports(path, oldImportPath, newImportPath)
 			if err != nil {
 				return err
 			}
@@ -145,8 +131,8 @@ func (c *command) Run(args []string) int {
 	if providerRepoName != "" {
 		prettyProviderName = " " + providerRepoName
 	}
-	c.ui.Info(fmt.Sprintf("Success! Provider%s is migrated to %s %s.",
-		prettyProviderName, newSDKPackagePath, sdkVersion))
+	c.ui.Info(fmt.Sprintf("Success! Provider%s is upgraded to %s %s.",
+		prettyProviderName, newPackagePath, sdkVersion))
 
 	hasVendor, err := HasVendorFolder(providerPath)
 	if err != nil {
@@ -189,12 +175,12 @@ func RewriteGoMod(providerPath string, sdkVersion string) error {
 		return err
 	}
 
-	err = pf.DropRequire(oldSDKImportPath)
+	err = pf.DropRequire(oldImportPath)
 	if err != nil {
 		return err
 	}
 
-	pf.AddNewRequire(newSDKPackagePath, sdkVersion, false)
+	pf.AddNewRequire(newPackagePath, sdkVersion, false)
 
 	pf.Cleanup()
 	formattedOutput, err := pf.Format()
@@ -244,4 +230,17 @@ func RewriteImportedPackageImports(filePath string, stringToReplace string, repl
 	}
 
 	return nil
+}
+
+type ExecError struct {
+	Err    error
+	Stderr string
+}
+
+func (ee *ExecError) Error() string {
+	return fmt.Sprintf("%s\n%s", ee.Err, ee.Stderr)
+}
+
+func NewExecError(err error, stderr string) *ExecError {
+	return &ExecError{err, stderr}
 }

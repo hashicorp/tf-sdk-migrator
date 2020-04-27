@@ -1,10 +1,12 @@
 package util
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -76,4 +78,36 @@ func GetProviderPath(providerRepoName string) (string, error) {
 	}
 
 	return "", fmt.Errorf("Could not find %s in working directory or GOPATH: %s", providerRepoName, gopath)
+}
+
+func GoModTidy(providerPath string) error {
+	args := []string{"go", "mod", "tidy"}
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Env = os.Environ()
+	cmd.Dir = providerPath
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	log.Printf("[DEBUG] Executing command %q", args)
+	err := cmd.Run()
+	if err != nil {
+		return NewExecError(err, stderr.String())
+	}
+
+	return nil
+}
+
+type ExecError struct {
+	Err    error
+	Stderr string
+}
+
+func (ee *ExecError) Error() string {
+	return fmt.Sprintf("%s\n%s", ee.Err, ee.Stderr)
+}
+
+func NewExecError(err error, stderr string) *ExecError {
+	return &ExecError{err, stderr}
 }
