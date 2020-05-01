@@ -46,7 +46,7 @@ func (c *command) Help() string {
 	return `Usage: tf-sdk-migrator v2upgrade [--help] [--sdk-version SDK_VERSION] [IMPORT_PATH]
 
   Upgrades the Terraform provider to major version 2 of the Terraform
-  provider SDK, defaulting to version ` + defaultVersion + `.
+  provider SDK, defaulting to the git reference ` + defaultVersion + `.
 
   Rewrites import paths and go.mod. No backup is made before files are
   overwritten.

@@ -47,7 +47,7 @@ func (c *command) Help() string {
 	return `Usage: tf-sdk-migrator migrate [--help] [--sdk-version SDK_VERSION] [--force] [IMPORT_PATH]
 
   Migrates the Terraform provider at PATH to the new Terraform provider
-  SDK, defaulting to version ` + defaultSDKVersion + `.
+  SDK, defaulting to the git reference ` + defaultSDKVersion + `.
 
   IMPORT_PATH is resolved relative to $GOPATH/src/IMPORT_PATH. If it is not supplied,
   it is assumed that the current working directory contains a Terraform provider.
