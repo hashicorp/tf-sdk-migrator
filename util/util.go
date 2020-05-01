@@ -93,7 +93,7 @@ func GetProviderPath(providerRepoName string) (string, error) {
 }
 
 func RewriteGoMod(providerPath string, sdkVersion string, oldPackagePath string, newPackagePath string) error {
-	goModPath := providerPath + "/go.mod"
+	goModPath := filepath.Join(providerPath, "go.mod")
 
 	input, err := ioutil.ReadFile(goModPath)
 	if err != nil {
