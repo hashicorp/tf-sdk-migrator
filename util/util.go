@@ -127,7 +127,10 @@ func RewriteGoMod(providerPath string, sdkVersion string, oldPackagePath string,
 }
 
 func RewriteImportedPackageImports(filePath string, stringToReplace string, replacement string) error {
-	// TODO: check file exists so ParseFile doesn't panic
+	if _, err := os.Stat(filePath); err != nil {
+		return err
+	}
+
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
 	if err != nil {
