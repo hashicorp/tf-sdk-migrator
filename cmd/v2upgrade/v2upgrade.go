@@ -1,4 +1,4 @@
-package migrate
+package v2upgrade
 
 import (
 	"flag"
@@ -8,16 +8,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hashicorp/tf-sdk-migrator/cmd/check"
 	"github.com/hashicorp/tf-sdk-migrator/util"
 	"github.com/mitchellh/cli"
 )
 
 const (
-	CommandName    = "migrate"
-	oldPackagePath = "github.com/hashicorp/terraform"
-	newPackagePath = "github.com/hashicorp/terraform-plugin-sdk"
-	defaultVersion = "v1.7.0"
+	CommandName    = "v2upgrade"
+	oldPackagePath = "github.com/hashicorp/terraform-plugin-sdk"
+	newPackagePath = "github.com/hashicorp/terraform-plugin-sdk/v2"
+	defaultVersion = "master"
 )
 
 var printConfig = printer.Config{
@@ -36,34 +35,32 @@ func CommandFactory(ui cli.Ui) func() (cli.Command, error) {
 }
 
 func (c *command) Help() string {
-	return `Usage: tf-sdk-migrator migrate [--help] [--sdk-version SDK_VERSION] [--force] [IMPORT_PATH]
+	return `Usage: tf-sdk-migrator v2upgrade [--help] [--sdk-version SDK_VERSION] [IMPORT_PATH]
 
-  Migrates the Terraform provider at PATH to the new Terraform provider
-  SDK, defaulting to the git reference ` + defaultVersion + `.
+  Upgrades the Terraform provider to major version 2 of the Terraform
+  provider SDK, defaulting to the git reference ` + defaultVersion + `.
+
+  Rewrites import paths and go.mod. No backup is made before files are
+  overwritten.
 
   IMPORT_PATH is resolved relative to $GOPATH/src/IMPORT_PATH. If it is not supplied,
   it is assumed that the current working directory contains a Terraform provider.
 
   Optionally, an SDK_VERSION can be passed, which is parsed as a Go module
-  release version. For example: v1.0.1, latest, master.
-
-  Rewrites import paths and go.mod. No backup is made before files are
-  overwritten.
+  release version. For example: v2.0.1, latest, master.
 
 Example:
-  tf-sdk-migrator migrate --sdk-version master github.com/terraform-providers/terraform-provider-local`
+  tf-sdk-migrator v2upgrade --sdk-version v2.0.0-rc.1 github.com/terraform-providers/terraform-provider-local`
 }
 
 func (c *command) Synopsis() string {
-	return "Migrates a Terraform provider to the new SDK (v1)."
+	return "Upgrades the Terraform provider SDK version to v2."
 }
 
 func (c *command) Run(args []string) int {
 	flags := flag.NewFlagSet(CommandName, flag.ExitOnError)
 	var sdkVersion string
 	flags.StringVar(&sdkVersion, "sdk-version", defaultVersion, "SDK version")
-	var forceMigration bool
-	flags.BoolVar(&forceMigration, "force", false, "Whether to ignore failing checks and force migration")
 	flags.Parse(args)
 
 	var providerRepoName string
@@ -87,19 +84,8 @@ func (c *command) Run(args []string) int {
 		return cli.RunResultHelp
 	}
 
-	err := check.RunCheck(c.ui, providerPath, providerRepoName)
-	if err != nil {
-		c.ui.Warn(err.Error())
-		if forceMigration {
-			c.ui.Warn("Ignoring failed eligibility checks")
-		} else {
-			c.ui.Error("Provider failed eligibility check for migration to the new SDK. Please see messages above.")
-			return 1
-		}
-	}
-
 	c.ui.Output("Rewriting provider go.mod file...")
-	err = util.RewriteGoMod(providerPath, sdkVersion, oldPackagePath, newPackagePath)
+	err := util.RewriteGoMod(providerPath, sdkVersion, oldPackagePath, newPackagePath)
 	if err != nil {
 		c.ui.Error(fmt.Sprintf("Error rewriting go.mod file: %s", err))
 		return 1
@@ -137,7 +123,7 @@ func (c *command) Run(args []string) int {
 	if providerRepoName != "" {
 		prettyProviderName = " " + providerRepoName
 	}
-	c.ui.Info(fmt.Sprintf("Success! Provider%s is migrated to %s %s.",
+	c.ui.Info(fmt.Sprintf("Success! Provider%s is upgraded to %s %s.",
 		prettyProviderName, newPackagePath, sdkVersion))
 
 	hasVendor, err := HasVendorFolder(providerPath)
@@ -166,4 +152,17 @@ func HasVendorFolder(providerPath string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+type ExecError struct {
+	Err    error
+	Stderr string
+}
+
+func (ee *ExecError) Error() string {
+	return fmt.Sprintf("%s\n%s", ee.Err, ee.Stderr)
+}
+
+func NewExecError(err error, stderr string) *ExecError {
+	return &ExecError{err, stderr}
 }
