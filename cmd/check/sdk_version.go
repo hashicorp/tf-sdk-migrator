@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	version "github.com/hashicorp/go-version"
-	"github.com/radeksimko/mod/modfile"
-	"github.com/radeksimko/mod/module"
+	"golang.org/x/mod/modfile"
+	"golang.org/x/mod/module"
 )
 
 func CheckDependencyVersion(providerPath, modPath, constaint string) (string, bool, error) {

@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/radeksimko/mod/modfile"
+	"golang.org/x/mod/modfile"
 )
 
 var printConfig = printer.Config{

@@ -8,14 +8,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/radeksimko/mod/lazyregexp"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"unicode"
 
-	"github.com/radeksimko/mod/module"
+	"golang.org/x/mod/internal/lazyregexp"
+	"golang.org/x/mod/module"
 )
 
 // A File is the parsed, interpreted form of a go.mod file.
@@ -153,7 +153,7 @@ func parseToFile(file string, data []byte, fix VersionFixer, strict bool) (*File
 	return f, nil
 }
 
-var GoVersionRE = lazyregexp.New(`([1-9][0-9]*)\.(0|[1-9][0-9]*)`)
+var GoVersionRE = lazyregexp.New(`^([1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
 
 func (f *File) add(errs *bytes.Buffer, line *Line, verb string, args []string, fix VersionFixer, strict bool) {
 	// If strict is false, this module is a dependency.
@@ -223,8 +223,7 @@ func (f *File) add(errs *bytes.Buffer, line *Line, verb string, args []string, f
 			fmt.Fprintf(errs, "%s:%d: %v\n", f.Syntax.Name, line.Start.Line, err)
 			return
 		}
-		if !module.MatchPathMajor(v, pathMajor) {
-			err := fmt.Errorf("Path %q doesn't match", pathMajor)
+		if err := module.CheckPathMajor(v, pathMajor); err != nil {
 			fmt.Fprintf(errs, "%s:%d: %v\n", f.Syntax.Name, line.Start.Line, &Error{Verb: verb, ModPath: s, Err: err})
 			return
 		}
@@ -266,8 +265,7 @@ func (f *File) add(errs *bytes.Buffer, line *Line, verb string, args []string, f
 				fmt.Fprintf(errs, "%s:%d: %v\n", f.Syntax.Name, line.Start.Line, err)
 				return
 			}
-			if !module.MatchPathMajor(v, pathMajor) {
-				err := fmt.Errorf("Path %q doesn't match", pathMajor)
+			if err := module.CheckPathMajor(v, pathMajor); err != nil {
 				fmt.Fprintf(errs, "%s:%d: %v\n", f.Syntax.Name, line.Start.Line, &Error{Verb: verb, ModPath: s, Err: err})
 				return
 			}
@@ -315,8 +313,8 @@ func isIndirect(line *Line) bool {
 	if len(line.Suffix) == 0 {
 		return false
 	}
-	f := strings.Fields(line.Suffix[0].Token)
-	return (len(f) == 2 && f[1] == "indirect" || len(f) > 2 && f[1] == "indirect;") && f[0] == "//"
+	f := strings.Fields(strings.TrimPrefix(line.Suffix[0].Token, string(slashSlash)))
+	return (len(f) == 1 && f[0] == "indirect" || len(f) > 1 && f[0] == "indirect;")
 }
 
 // setIndirect sets line to have (or not have) a "// indirect" comment.
@@ -331,13 +329,17 @@ func setIndirect(line *Line, indirect bool) {
 			line.Suffix = []Comment{{Token: "// indirect", Suffix: true}}
 			return
 		}
-		// Insert at beginning of existing comment.
+
 		com := &line.Suffix[0]
-		space := " "
-		if len(com.Token) > 2 && com.Token[2] == ' ' || com.Token[2] == '\t' {
-			space = ""
+		text := strings.TrimSpace(strings.TrimPrefix(com.Token, string(slashSlash)))
+		if text == "" {
+			// Empty comment.
+			com.Token = "// indirect"
+			return
 		}
-		com.Token = "// indirect;" + space + com.Token[2:]
+
+		// Insert at beginning of existing comment.
+		com.Token = "// indirect; " + text
 		return
 	}
 
@@ -507,9 +509,13 @@ func (f *File) AddGoStmt(version string) error {
 		return fmt.Errorf("invalid language version string %q", version)
 	}
 	if f.Go == nil {
+		var hint Expr
+		if f.Module != nil && f.Module.Syntax != nil {
+			hint = f.Module.Syntax
+		}
 		f.Go = &Go{
 			Version: version,
-			Syntax:  f.Syntax.addLine(nil, "go", version),
+			Syntax:  f.Syntax.addLine(hint, "go", version),
 		}
 	} else {
 		f.Go.Version = version
@@ -557,6 +563,8 @@ func (f *File) SetRequire(req []*Require) {
 		if v, ok := need[r.Mod.Path]; ok {
 			r.Mod.Version = v
 			r.Indirect = indirect[r.Mod.Path]
+		} else {
+			*r = Require{}
 		}
 	}
 
@@ -568,6 +576,9 @@ func (f *File) SetRequire(req []*Require) {
 				var newLines []*Line
 				for _, line := range stmt.Line {
 					if p, err := parseString(&line.Token[0]); err == nil && need[p] != "" {
+						if len(line.Comments.Before) == 1 && len(line.Comments.Before[0].Token) == 0 {
+							line.Comments.Before = line.Comments.Before[:0]
+						}
 						line.Token[1] = need[p]
 						delete(need, p)
 						setIndirect(line, indirect[p])
