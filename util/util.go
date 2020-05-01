@@ -1,15 +1,27 @@
 package util
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"go/parser"
+	"go/printer"
+	"go/token"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
+
+	"github.com/radeksimko/mod/modfile"
 )
+
+var printConfig = printer.Config{
+	Mode:     printer.TabIndent | printer.UseSpaces,
+	Tabwidth: 8,
+}
 
 func StringSliceContains(ss []string, s string) bool {
 	for _, i := range ss {
@@ -78,6 +90,76 @@ func GetProviderPath(providerRepoName string) (string, error) {
 	}
 
 	return "", fmt.Errorf("Could not find %s in working directory or GOPATH: %s", providerRepoName, gopath)
+}
+
+func RewriteGoMod(providerPath string, sdkVersion string, oldPackagePath string, newPackagePath string) error {
+	goModPath := providerPath + "/go.mod"
+
+	input, err := ioutil.ReadFile(goModPath)
+	if err != nil {
+		return err
+	}
+
+	pf, err := modfile.Parse(goModPath, input, nil)
+	if err != nil {
+		return err
+	}
+
+	err = pf.DropRequire(oldPackagePath)
+	if err != nil {
+		return err
+	}
+
+	pf.AddNewRequire(newPackagePath, sdkVersion, false)
+
+	pf.Cleanup()
+	formattedOutput, err := pf.Format()
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(goModPath, formattedOutput, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func RewriteImportedPackageImports(filePath string, stringToReplace string, replacement string) error {
+	// TODO: check file exists so ParseFile doesn't panic
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
+	if err != nil {
+		return err
+	}
+
+	for _, impSpec := range f.Imports {
+		impPath, err := strconv.Unquote(impSpec.Path.Value)
+		if err != nil {
+			log.Print(err)
+		}
+		// prevent partial matches on package names
+		if impPath == stringToReplace || strings.HasPrefix(impPath, stringToReplace+"/") {
+			newImpPath := strings.Replace(impPath, stringToReplace, replacement, -1)
+			impSpec.Path.Value = strconv.Quote(newImpPath)
+		}
+	}
+
+	out, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	w := bufio.NewWriter(out)
+	if err := printConfig.Fprint(w, fset, f); err != nil {
+		return err
+	}
+	if err := w.Flush(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func GoModTidy(providerPath string) error {

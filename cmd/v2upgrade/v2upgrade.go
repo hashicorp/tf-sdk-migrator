@@ -1,28 +1,20 @@
 package v2upgrade
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
-	"go/parser"
 	"go/printer"
-	"go/token"
-	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/tf-sdk-migrator/util"
 	"github.com/mitchellh/cli"
-	"github.com/radeksimko/mod/modfile"
 )
 
 const (
 	CommandName    = "v2upgrade"
-	oldImportPath  = "github.com/hashicorp/terraform-plugin-sdk"
-	newImportPath  = "github.com/hashicorp/terraform-plugin-sdk/v2"
+	oldPackagePath = "github.com/hashicorp/terraform-plugin-sdk"
 	newPackagePath = "github.com/hashicorp/terraform-plugin-sdk/v2"
 	defaultVersion = "master"
 )
@@ -93,7 +85,7 @@ func (c *command) Run(args []string) int {
 	}
 
 	c.ui.Output("Rewriting provider go.mod file...")
-	err := RewriteGoMod(providerPath, sdkVersion)
+	err := util.RewriteGoMod(providerPath, sdkVersion, oldPackagePath, newPackagePath)
 	if err != nil {
 		c.ui.Error(fmt.Sprintf("Error rewriting go.mod file: %s", err))
 		return 1
@@ -108,7 +100,7 @@ func (c *command) Run(args []string) int {
 			return filepath.SkipDir
 		}
 		if !info.IsDir() && strings.HasSuffix(info.Name(), ".go") {
-			err := RewriteImportedPackageImports(path, oldImportPath, newImportPath)
+			err := util.RewriteImportedPackageImports(path, oldPackagePath, newPackagePath)
 			if err != nil {
 				return err
 			}
@@ -160,76 +152,6 @@ func HasVendorFolder(providerPath string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func RewriteGoMod(providerPath string, sdkVersion string) error {
-	goModPath := providerPath + "/go.mod"
-
-	input, err := ioutil.ReadFile(goModPath)
-	if err != nil {
-		return err
-	}
-
-	pf, err := modfile.Parse(goModPath, input, nil)
-	if err != nil {
-		return err
-	}
-
-	err = pf.DropRequire(oldImportPath)
-	if err != nil {
-		return err
-	}
-
-	pf.AddNewRequire(newPackagePath, sdkVersion, false)
-
-	pf.Cleanup()
-	formattedOutput, err := pf.Format()
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(goModPath, formattedOutput, 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func RewriteImportedPackageImports(filePath string, stringToReplace string, replacement string) error {
-	// TODO: check file exists so ParseFile doesn't panic
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
-	if err != nil {
-		return err
-	}
-
-	for _, impSpec := range f.Imports {
-		impPath, err := strconv.Unquote(impSpec.Path.Value)
-		if err != nil {
-			log.Print(err)
-		}
-		// prevent partial matches on package names
-		if impPath == stringToReplace || strings.HasPrefix(impPath, stringToReplace+"/") {
-			newImpPath := strings.Replace(impPath, stringToReplace, replacement, -1)
-			impSpec.Path.Value = strconv.Quote(newImpPath)
-		}
-	}
-
-	out, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	w := bufio.NewWriter(out)
-	if err := printConfig.Fprint(w, fset, f); err != nil {
-		return err
-	}
-	if err := w.Flush(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 type ExecError struct {

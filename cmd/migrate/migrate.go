@@ -1,31 +1,23 @@
 package migrate
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
-	"go/parser"
 	"go/printer"
-	"go/token"
-	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/tf-sdk-migrator/cmd/check"
 	"github.com/hashicorp/tf-sdk-migrator/util"
 	"github.com/mitchellh/cli"
-	"github.com/radeksimko/mod/modfile"
 )
 
 const (
-	CommandName       = "migrate"
-	oldSDKImportPath  = "github.com/hashicorp/terraform"
-	newSDKImportPath  = "github.com/hashicorp/terraform-plugin-sdk"
-	newSDKPackagePath = "github.com/hashicorp/terraform-plugin-sdk"
-	defaultSDKVersion = "v1.7.0"
+	CommandName    = "migrate"
+	oldPackagePath = "github.com/hashicorp/terraform"
+	newPackagePath = "github.com/hashicorp/terraform-plugin-sdk"
+	defaultVersion = "v1.7.0"
 )
 
 var printConfig = printer.Config{
@@ -47,7 +39,7 @@ func (c *command) Help() string {
 	return `Usage: tf-sdk-migrator migrate [--help] [--sdk-version SDK_VERSION] [--force] [IMPORT_PATH]
 
   Migrates the Terraform provider at PATH to the new Terraform provider
-  SDK, defaulting to the git reference ` + defaultSDKVersion + `.
+  SDK, defaulting to the git reference ` + defaultVersion + `.
 
   IMPORT_PATH is resolved relative to $GOPATH/src/IMPORT_PATH. If it is not supplied,
   it is assumed that the current working directory contains a Terraform provider.
@@ -69,7 +61,7 @@ func (c *command) Synopsis() string {
 func (c *command) Run(args []string) int {
 	flags := flag.NewFlagSet(CommandName, flag.ExitOnError)
 	var sdkVersion string
-	flags.StringVar(&sdkVersion, "sdk-version", defaultSDKVersion, "SDK version")
+	flags.StringVar(&sdkVersion, "sdk-version", defaultVersion, "SDK version")
 	var forceMigration bool
 	flags.BoolVar(&forceMigration, "force", false, "Whether to ignore failing checks and force migration")
 	flags.Parse(args)
@@ -107,7 +99,7 @@ func (c *command) Run(args []string) int {
 	}
 
 	c.ui.Output("Rewriting provider go.mod file...")
-	err = RewriteGoMod(providerPath, sdkVersion)
+	err = util.RewriteGoMod(providerPath, sdkVersion, oldPackagePath, newPackagePath)
 	if err != nil {
 		c.ui.Error(fmt.Sprintf("Error rewriting go.mod file: %s", err))
 		return 1
@@ -122,7 +114,7 @@ func (c *command) Run(args []string) int {
 			return filepath.SkipDir
 		}
 		if !info.IsDir() && strings.HasSuffix(info.Name(), ".go") {
-			err := RewriteImportedPackageImports(path, oldSDKImportPath, newSDKImportPath)
+			err := util.RewriteImportedPackageImports(path, oldPackagePath, newPackagePath)
 			if err != nil {
 				return err
 			}
@@ -146,7 +138,7 @@ func (c *command) Run(args []string) int {
 		prettyProviderName = " " + providerRepoName
 	}
 	c.ui.Info(fmt.Sprintf("Success! Provider%s is migrated to %s %s.",
-		prettyProviderName, newSDKPackagePath, sdkVersion))
+		prettyProviderName, newPackagePath, sdkVersion))
 
 	hasVendor, err := HasVendorFolder(providerPath)
 	if err != nil {
@@ -174,74 +166,4 @@ func HasVendorFolder(providerPath string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func RewriteGoMod(providerPath string, sdkVersion string) error {
-	goModPath := providerPath + "/go.mod"
-
-	input, err := ioutil.ReadFile(goModPath)
-	if err != nil {
-		return err
-	}
-
-	pf, err := modfile.Parse(goModPath, input, nil)
-	if err != nil {
-		return err
-	}
-
-	err = pf.DropRequire(oldSDKImportPath)
-	if err != nil {
-		return err
-	}
-
-	pf.AddNewRequire(newSDKPackagePath, sdkVersion, false)
-
-	pf.Cleanup()
-	formattedOutput, err := pf.Format()
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(goModPath, formattedOutput, 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func RewriteImportedPackageImports(filePath string, stringToReplace string, replacement string) error {
-	// TODO: check file exists so ParseFile doesn't panic
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
-	if err != nil {
-		return err
-	}
-
-	for _, impSpec := range f.Imports {
-		impPath, err := strconv.Unquote(impSpec.Path.Value)
-		if err != nil {
-			log.Print(err)
-		}
-		// prevent partial matches on package names
-		if impPath == stringToReplace || strings.HasPrefix(impPath, stringToReplace+"/") {
-			newImpPath := strings.Replace(impPath, stringToReplace, replacement, -1)
-			impSpec.Path.Value = strconv.Quote(newImpPath)
-		}
-	}
-
-	out, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	w := bufio.NewWriter(out)
-	if err := printConfig.Fprint(w, fset, f); err != nil {
-		return err
-	}
-	if err := w.Flush(); err != nil {
-		return err
-	}
-
-	return nil
 }
