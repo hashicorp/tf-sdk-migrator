@@ -16,7 +16,7 @@ const (
 	CommandName    = "v2upgrade"
 	oldPackagePath = "github.com/hashicorp/terraform-plugin-sdk"
 	newPackagePath = "github.com/hashicorp/terraform-plugin-sdk/v2"
-	defaultVersion = "v2.0.3"
+	defaultVersion = "v2.4.3"
 )
 
 var printConfig = printer.Config{
